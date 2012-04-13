@@ -42,7 +42,7 @@ SOBJECTS	= $(SOURCES:.$(SrcSuf)=.$(DllSuf))
 ###
 
 #all: drawPhotonJet_2bkg drawPhotonJetExtrap draw_all_methods_vs_pt draw_all_methods_vs_npv draw_crosschecks
-all: drawPhotonJet_2bkg drawPhotonJetExtrap
+all: drawPhotonJet_2bkg drawPhotonJetExtrap draw_all_methods_vs_pt
 
 clean:
 	@rm *.o;
@@ -53,7 +53,7 @@ drawPhotonJet_2bkg: drawBase.o fitTools.o drawPhotonJet_2bkg.o
 drawPhotonJetExtrap: drawBase.o fitTools.o drawExtrap.o drawPhotonJetExtrap.o
 	$(LD) $(LIBS) $(SOFLAGS) $(LDFLAGS) $+ -o $@
 
-draw_all_methods_vs_pt: $(CMSSW_BASE)/src/UserCode/SBrochet/CommonTools/DrawBase.o $(CMSSW_BASE)/src/UserCode/SBrochet/CommonTools/fitTools.o draw_all_methods_vs_pt.o
+draw_all_methods_vs_pt: drawBase.o fitTools.o draw_all_methods_vs_pt.o
 	$(LD) $(LIBS) $(SOFLAGS) $(LDFLAGS) $+ -o $@
 
 draw_all_methods_vs_npv: $(CMSSW_BASE)/src/UserCode/SBrochet/CommonTools/DrawBase.o $(CMSSW_BASE)/src/UserCode/SBrochet/CommonTools/fitTools.o draw_all_methods_vs_npv.o
