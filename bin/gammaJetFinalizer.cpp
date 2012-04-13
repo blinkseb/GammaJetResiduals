@@ -189,6 +189,9 @@ void GammaJetFinalizer::runAnalysis() {
 
   std::cout << "Processing..." << std::endl;
 
+  // Automatically call Sumw2 when creating an histogram
+  TH1::SetDefaultSumw2(true);
+
   // Init some analysis variables
   TFileDirectory analysisDir = fs.mkdir("analysis");
 
