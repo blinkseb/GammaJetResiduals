@@ -280,7 +280,9 @@ void GammaJetFinalizer::runAnalysis() {
     extrap_responseBalancingPhotGammaEta013 = buildExtrapolationVector<TH1F>(extrapDir, "extrap_resp_balancing_phot_gamma", "eta013", extrapolationBins, extrapolationMin, extrapolationMax);
   }
   ExtrapolationVectors<TH1F>::type extrap_responseMPF = buildExtrapolationEtaVector<TH1F>(extrapDir, "extrap_resp_mpf", extrapolationBins, extrapolationMin, extrapolationMax);
+  ExtrapolationVectors<TH1F>::type extrap_responseMPFRaw = buildExtrapolationEtaVector<TH1F>(extrapDir, "extrap_resp_mpf_raw", extrapolationBins, extrapolationMin, extrapolationMax);
   std::vector<std::vector<TH1F*> > extrap_responseMPFEta013 = buildExtrapolationVector<TH1F>(extrapDir, "extrap_resp_mpf", "eta013", extrapolationBins, extrapolationMin, extrapolationMax);
+  std::vector<std::vector<TH1F*> > extrap_responseMPFRawEta013 = buildExtrapolationVector<TH1F>(extrapDir, "extrap_resp_mpf_raw", "eta013", extrapolationBins, extrapolationMin, extrapolationMax);
 
   ExtrapolationVectors<TH1F>::type extrap_responseMPFGen;
   std::vector<std::vector<TH1F*> > extrap_responseMPFGenEta013;
@@ -431,7 +433,8 @@ void GammaJetFinalizer::runAnalysis() {
         if (fabs(firstJet.eta) < 1.3) {
           extrap_responseBalancingEta013[ptBin][extrapBin]->Fill(r_RecoPhot, eventWeight);
           extrap_responseBalancingRawEta013[ptBin][extrapBin]->Fill(r_RecoPhotRaw, eventWeight);
-          extrap_responseMPFEta013[ptBin][extrapBin]->Fill(r_RecoPhot, eventWeight);
+          extrap_responseMPFEta013[ptBin][extrapBin]->Fill(respMPF, eventWeight);
+          extrap_responseMPFRawEta013[ptBin][extrapBin]->Fill(respMPFRaw, eventWeight);
 
           if (mIsMC && ptBinGen >= 0 && etaBinGen >= 0) {
             extrap_responseBalancingGenEta013[ptBinGen][extrapBin]->Fill(r_RecoGen, eventWeight);
@@ -439,7 +442,7 @@ void GammaJetFinalizer::runAnalysis() {
             extrap_responseBalancingGenPhotEta013[ptBinGen][extrapBin]->Fill(r_GenPhot, eventWeight);
             extrap_responseBalancingGenGammaEta013[ptBinGen][extrapBin]->Fill(r_GenGamma, eventWeight);
             extrap_responseBalancingPhotGammaEta013[ptBinGen][extrapBin]->Fill(r_PhotGamma, eventWeight);
-            extrap_responseMPFGenEta013[ptBinGen][extrapBin]->Fill(r_RecoPhot, eventWeight);
+            extrap_responseMPFGenEta013[ptBinGen][extrapBin]->Fill(respMPFGen, eventWeight);
           }
         }
 
@@ -448,7 +451,8 @@ void GammaJetFinalizer::runAnalysis() {
 
         extrap_responseBalancing[etaBin][ptBin][extrapBin]->Fill(r_RecoPhot, eventWeight);
         extrap_responseBalancingRaw[etaBin][ptBin][extrapBin]->Fill(r_RecoPhotRaw, eventWeight);
-        extrap_responseMPF[etaBin][ptBin][extrapBin]->Fill(r_RecoPhot, eventWeight);
+        extrap_responseMPF[etaBin][ptBin][extrapBin]->Fill(respMPF, eventWeight);
+        extrap_responseMPFRaw[etaBin][ptBin][extrapBin]->Fill(respMPFRaw, eventWeight);
 
         if (mIsMC && ptBinGen >= 0 && etaBinGen >= 0) {
           extrap_responseBalancingGen[etaBinGen][ptBinGen][extrapBin]->Fill(r_RecoGen, eventWeight);
@@ -456,7 +460,7 @@ void GammaJetFinalizer::runAnalysis() {
           extrap_responseBalancingGenPhot[etaBinGen][ptBinGen][extrapBin]->Fill(r_GenPhot, eventWeight);
           extrap_responseBalancingGenGamma[etaBinGen][ptBinGen][extrapBin]->Fill(r_GenGamma, eventWeight);
           extrap_responseBalancingPhotGamma[etaBinGen][ptBinGen][extrapBin]->Fill(r_PhotGamma, eventWeight);
-          extrap_responseMPFGen[etaBinGen][ptBinGen][extrapBin]->Fill(r_RecoPhot, eventWeight);
+          extrap_responseMPFGen[etaBinGen][ptBinGen][extrapBin]->Fill(respMPFGen, eventWeight);
         }
 
       } while (false);
@@ -629,6 +633,33 @@ void GammaJetFinalizer::computePUWeight() {
   }
 
   mPUWeight = mLumiReWeighter->weight(analysis.ntrue_interactions);
+}
+
+void GammaJetFinalizer::checkInputFiles() {
+  for (std::vector<std::string>::iterator it = mInputFiles.begin(); it != mInputFiles.end();) {
+    TFile* f = TFile::Open(it->c_str());
+    if (! f) {
+      std::cerr << "Error: can't open '" << it->c_str() << "'. Removed from input files." << std::endl;
+      it = mInputFiles.erase(it);
+      continue;
+    }
+
+    TTree* analysis = static_cast<TTree*>(f->Get("gammaJet/analysis"));
+    if (! analysis || analysis->GetEntry(0) == 0) {
+      std::cerr << "Error: Trees inside '" << it->c_str() << "' were empty. Removed from input files." << std::endl;
+      it = mInputFiles.erase(it);
+
+      f->Close();
+      delete f;
+      
+      continue;
+    }
+
+    f->Close();
+    delete f;
+
+    ++it;
+  }
 }
 
 std::vector<std::string> readInputFiles(const std::string& list) {

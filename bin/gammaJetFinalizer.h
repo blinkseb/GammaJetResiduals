@@ -54,6 +54,7 @@ class GammaJetFinalizer
 
     void setInputFiles(const std::vector<std::string>& files) {
       mInputFiles = files;
+      checkInputFiles();
     }
 
     void setDatasetName(const std::string& name) {
@@ -87,6 +88,7 @@ class GammaJetFinalizer
     void runAnalysis();
 
   private:
+    void checkInputFiles();
     void loadFiles(TChain& chain);
 
     void doSecondJetExtrapolation();
