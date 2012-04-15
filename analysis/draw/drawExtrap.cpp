@@ -463,7 +463,8 @@ void drawExtrap::drawResponseExtrap(const std::string& etaRegion, bool rawJets) 
     yHistoName = TString::Format("analysis/extrapolation/extrap_ptPhot_%d_%d/extrap_resp_balancing_gen_phot_%s", (int) currentBin.first, (int) currentBin.second, etaRegion.c_str());
     getYPoints(get_mcFile(0), yHistoName, nPoints, y_resp_genPhot, y_resp_genPhot_err,  y_reso_genPhot, y_reso_genPhot_err);
 
-    yHistoName = TString::Format("analysis/extrapolation/extrap_ptPhot_%d_%d/extrap_resp_mpf%s_gen_%s", (int) currentBin.first, (int) currentBin.second, rawPostfix.c_str(), etaRegion.c_str());
+    // No raw gen mpf, only gen mpf, because MPF does not use jets
+    yHistoName = TString::Format("analysis/extrapolation/extrap_ptPhot_%d_%d/extrap_resp_mpf_gen_%s", (int) currentBin.first, (int) currentBin.second, etaRegion.c_str());
     getYPoints(get_mcFile(0), yHistoName, nPoints, y_resp_genMPF, y_resp_genMPF_err,  y_reso_genMPF, y_reso_genMPF_err);
 
     yHistoName = TString::Format("analysis/extrapolation/extrap_ptPhot_%d_%d/extrap_resp_balancing%s_gen_%s", (int) currentBin.first, (int) currentBin.second, rawPostfix.c_str(), etaRegion.c_str());
