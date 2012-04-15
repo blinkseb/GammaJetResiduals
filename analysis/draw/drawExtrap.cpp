@@ -2185,11 +2185,9 @@ void drawExtrap::getYPoints(TFile * file, const char* yHistoName, Int_t nPoints,
   for (int i = 0; i < nPoints; ++i) {
 
     TString fullName = TString::Format("%s_%d", yHistoName, i);
-    //std::cout << fullName << " i: " << i << std::endl;
-
     TH1* h1_r = (TH1*) file->Get(fullName);
 
-    if (h1_r == 0) {
+    if (! h1_r) {
       std::cout << "Didn't find " << fullName << " in file " << file->GetName() << std::endl;
       return;
     }
@@ -2203,99 +2201,53 @@ void drawExtrap::getYPoints(TFile * file, const char* yHistoName, Int_t nPoints,
       continue;
     }
 
+    float mean = h1_r->GetMean();
+    float rms = h1_r->GetRMS();
+    float mean_err = h1_r->GetMeanError();
+    float rms_err = h1_r->GetRMSError();
 
-    Float_t mean = h1_r->GetMean();
-    Float_t rms = h1_r->GetRMS();
-    Float_t mean_err = h1_r->GetMeanError();
-    //Float_t rms_err = h1_r->GetRMSError();
-    //Float_t rms_err = (LUMI>0) ? rms/sqrt((Float_t)LUMI*h1_r->Integral()*(Float_t)INT_PERC/100.) : h1_r->GetRMSError();
-    Float_t rms_err = h1_r->GetRMSError();
-
-    Float_t mean70, mean70_err, rms70, rms70_err;
-    fitTools::getTruncatedMeanAndRMS(h1_r, mean70, mean70_err, rms70, rms70_err, 0.70, 0.70);
-
-    Float_t mean95, mean95_err, rms95, rms95_err;
-    fitTools::getTruncatedMeanAndRMS(h1_r, mean95, mean95_err, rms95, rms95_err, 0.95, 0.95);
-
-    Float_t mean99, mean99_err, rms99, rms99_err;
-    fitTools::getTruncatedMeanAndRMS(h1_r, mean99, mean99_err, rms99, rms99_err, 0.99, 0.99);
-
-    std::cout << "Mean: " << mean99 << " Err: " << mean99_err << std::endl;
-
-    //Float_t mean, mean_err, rms, rms_err;
-    //fitTools::getProjectionMeanAndRMS(h1_r, mean, mean_err, rms, rms_err, 1., 0.9);
-
-    TF1* gaussian = new TF1("gaussian", "gaus");
-    gaussian->SetLineColor(kRed);
-    TH1* newhisto = NULL;
-    fitTools::fitProjection_sameArea(h1_r, gaussian, &newhisto, (Float_t)(INTPERC_ / 100.), "RQ");
-    //fitTools::fitProjection(h1_r, gaussian, 2., "RQ");
-
-    Float_t mu = gaussian->GetParameter(1);
-    Float_t sigma = gaussian->GetParameter(2);
-    //TF1* gaussian_chi = new TF1("gaussian_chi", "gaus");
-    //fitTools::fitProjection(h1_r, gaussian_chi, 1.5, "RQN");
-    Float_t mu_err = gaussian->GetParError(1);
-    //Float_t sigma_err = gaussian->GetParError(2);
-    //Float_t sigma_err = (LUMI>0) ? sigma/sqrt((Float_t)LUMI*h1_r->Integral()*(Float_t)INT_PERC_/100.) : h1_r->GetRMSError();
-    Float_t sigma_err = h1_r->GetRMSError();
+    float rmsFactor = -1;
 
     if (FIT_RMS_ == "FIT") {
+
+      TF1* gaussian = new TF1("gaussian", "gaus");
+      gaussian->SetLineColor(kRed);
+      TH1* newhisto = NULL;
+      fitTools::fitProjection_sameArea(h1_r, gaussian, &newhisto, (Float_t)(INTPERC_ / 100.), "RQ");
+
+      float mu = gaussian->GetParameter(1);
+      float sigma = gaussian->GetParameter(2);
+      float mu_err = gaussian->GetParError(1);
+      float sigma_err = h1_r->GetRMSError();
 
       y_resp[i] = mu;
       y_resp_err[i] = mu_err;
 
       y_reso[i] = sigma / mu;
       y_reso_err[i] = sqrt(sigma_err * sigma_err / (mu * mu) + sigma * sigma * mu_err * mu_err / (mu * mu * mu * mu));
-      //std::cout << "resp: " << y_resp[i] << " err: " << y_resp_err[i] << std::endl;
 
-    } else if (FIT_RMS_ == "RMS") {
-
-      y_resp[i] = mean;
-      y_resp_err[i] = mean_err;
-
-      y_reso[i] = rms / mean;
-      y_reso_err[i] = sqrt(rms_err * rms_err / (mean * mean) + rms * rms * mean_err * mean_err / (mean * mean * mean * mean));
+      continue;
 
     } else if (FIT_RMS_ == "RMS70") {
-
-      y_resp[i] = mean70;
-      y_resp_err[i] = mean70_err;
-
-      y_reso[i] = rms70 / mean70;
-      y_reso_err[i] = sqrt(rms70_err * rms70_err / (mean70 * mean70) + rms70 * rms70 * mean70_err * mean70_err / (mean70 * mean70 * mean70 * mean70));
-
+      rmsFactor = 0.70;
     } else if (FIT_RMS_ == "RMS95") {
-
-      y_resp[i] = mean95;
-      y_resp_err[i] = mean95_err;
-
-      y_reso[i] = rms95 / mean95;
-      y_reso_err[i] = sqrt(rms95_err * rms95_err / (mean95 * mean95) + rms95 * rms95 * mean95_err * mean95_err / (mean95 * mean95 * mean95 * mean95));
-
+      rmsFactor = 0.95;
     } else if (FIT_RMS_ == "RMS99") {
-
-      y_resp[i] = mean99;
-      y_resp_err[i] = mean99_err;
-
-      y_reso[i] = rms99 / mean99;
-      y_reso_err[i] = sqrt(rms99_err * rms99_err / (mean99 * mean99) + rms99 * rms99 * mean99_err * mean99_err / (mean99 * mean99 * mean99 * mean99));
-
-    } else if (FIT_RMS_ == "MIX") {
-
-      y_resp[i] = mean;
-      y_resp_err[i] = mean_err;
-
-      y_reso[i] = sigma / mean;
-      y_reso_err[i] = sqrt(sigma_err * sigma_err / (mean * mean) + sigma * sigma * mean_err * mean_err / (mean * mean * mean * mean));
-
+      rmsFactor = 0.99;
     } else {
-
       std::cout << "WARNING!! FIT_RMS type '" << FIT_RMS_ << "' currently not supported. Exiting." << std::endl;
       exit(66);
-
     }
 
+    if (rmsFactor > 0) {
+      fitTools::getTruncatedMeanAndRMS(h1_r, mean, mean_err, rms, rms_err, rmsFactor, rmsFactor);
+    }
+
+    y_resp[i] = mean;
+    y_resp_err[i] = mean_err;
+
+    y_reso[i] = rms / mean;
+    y_reso_err[i] = sqrt(rms_err * rms_err / (mean * mean) + rms * rms * mean_err * mean_err / (mean * mean * mean * mean));
   } //for
 
 } //getYPoints
