@@ -1,0 +1,19 @@
+How-to setup (CMSSW 4.4.4, pat V08-07-42)
+
+cmsrel CMSSW_4_4_4
+cd CMSSW_4_4_4/src
+cmsenv
+addpkg PhysicsTools/PatAlgos    V08-07-42
+addpkg PhysicsTools/PatUtils    V03-09-18-03
+addpkg CommonTools/ParticleFlow V00-03-05-05
+addpkg FWCore/GuiBrowsers V00-00-60
+
+mkdir JetMETCorrections
+cd JetMETCorrections
+git clone git://madalynn.eu/GammaJetFilter.git
+
+cd GammaJetFilter
+git checkout cmssw_4_4
+
+cd ..
+scram b -j 9
