@@ -30,8 +30,11 @@ class PtBinning {
       return mPtBins[bin];
     }
 
-    std::vector<std::pair<float, float> > getBinning() const {
-      return mPtBins;
+    std::vector<std::pair<float, float> > getBinning(int n = -1) const {
+      if (n < 0) {
+        n = size();
+      }
+      return std::vector<std::pair<float, float> >(mPtBins.begin(), mPtBins.begin() + n);
     }
 
   private:

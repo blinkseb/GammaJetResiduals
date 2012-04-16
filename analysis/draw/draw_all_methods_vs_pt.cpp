@@ -118,9 +118,18 @@ int main(int argc, char* argv[]) {
   db->set_outputdir(outputDir);
 
   //std::string fit_rms = (db->get_recoType()=="calo") ? "FIT" : "RMS99";
+  EtaBinning etaBinning;
+  size_t s = etaBinning.size();
 
-  draw_vs_pt_plots("response",   "eta011", fit_rms, db, false);
-  draw_vs_pt_plots("resolution", "eta011", fit_rms, db, false);
+  for (size_t i = 0; i < s; i++) {
+    std::string etaBin = etaBinning.getBinName(i);
+    draw_vs_pt_plots("response",   etaBin, fit_rms, db, false);
+    draw_vs_pt_plots("resolution", etaBin, fit_rms, db, false);
+
+    draw_vs_pt_plots("response",   etaBin, fit_rms, db, true);
+    draw_vs_pt_plots("resolution", etaBin, fit_rms, db, true);
+  }
+
   /*draw_vs_pt_plots("response",   "eta011", fit_rms, db, (bool)true);
   draw_vs_pt_plots("resolution", "eta011", fit_rms, db, (bool)true);
   //draw_vs_pt_plots("response",   "eta011", fit_rms, db, (bool)true, "RecoRelRaw");
@@ -865,7 +874,7 @@ void draw_vs_pt_plots(const std::string& resp_reso, const std::string& etaRegion
 
 
   // get syst band from file:
-  std::string systFile_name = "totalSyst_";
+  /*std::string systFile_name = "totalSyst_";
   if (resp_reso == "response") systFile_name += "resp";
   else                       systFile_name += "reso";
   systFile_name += "_" + db->get_algoType();
@@ -881,7 +890,7 @@ void draw_vs_pt_plots(const std::string& resp_reso, const std::string& etaRegion
       syst_band->SetBinError(ibin_syst + 1, syst_band->GetBinContent(ibin_syst + 1) / 100.); //not in percent
       syst_band->SetBinContent(ibin_syst + 1, 1.); //put it around one
     }
-  }
+  }*/
 
   char balancingText[400];
   sprintf(balancingText, "Balancing (FIT = %.3lf #pm %.3lf, #chi^{2}/NDF = %.2lf/%d)", f_const_BALANCING->GetParameter(0), f_const_BALANCING->GetParError(0), f_const_BALANCING->GetChisquare(), f_const_BALANCING->GetNDF());
