@@ -1063,13 +1063,11 @@ void drawExtrap::drawResponseExtrap(const std::string& etaRegion, bool rawJets) 
     legend_resp->AddEntry(gr_resp_recoPhot, "MC (#gamma + jet)", "P");
 
 
-    char labeltext[50];
-    sprintf(labeltext, "%d < p_{T}^{#gamma} < %d GeV", (int)ptMin, (int)ptMax);
-    //sprintf(labeltext, "%d < p_{T}^{#gamma} < %d GeV/c", (int)ptMin, (int)ptMax);
-    TPaveText* label_resp = new TPaveText(0.18, 0.15, 0.4, 0.18, "brNDC");
+    TString labelText = TString::Format("%d < p_{T}^{#gamma} < %d GeV", (int) ptMin, (int) ptMax);
+    TPaveText* label_resp = new TPaveText(0.24, 0.18, 0.4, 0.21, "brNDC");
     label_resp->SetFillColor(kWhite);
     label_resp->SetTextSize(0.035);
-    label_resp->AddText(labeltext);
+    label_resp->AddText(labelText);
 
     TPaveText* label_algo = this->get_labelAlgo(4);
 
@@ -1746,7 +1744,7 @@ void drawExtrap::drawResponseExtrap(const std::string& etaRegion, bool rawJets) 
   TPaveText* label_reso = new TPaveText(0.25, 0.85, 0.47, 0.9, "brNDC");
   label_reso->SetFillColor(kWhite);
   label_reso->SetTextSize(0.035);
-  label_reso->AddText(labeltext);
+  label_reso->AddText(labelText);
 
   gr_reso_recoGen->SetMarkerSize(markerSize);
   gr_reso_genPhot->SetMarkerSize(markerSize);
@@ -1840,7 +1838,7 @@ void drawExtrap::drawResponseExtrap(const std::string& etaRegion, bool rawJets) 
   label_reso = new TPaveText(0.25, 0.85, 0.47, 0.9, "brNDC");
   label_reso->SetFillColor(kWhite);
   label_reso->SetTextSize(0.035);
-  label_reso->AddText(labeltext);
+  label_reso->AddText(labelText);
 
   gr_reso_MPF->SetMarkerSize(markerSize);
   gr_reso_MPFDATA->SetMarkerSize(markerSize);
