@@ -79,6 +79,10 @@ class GammaJetFinalizer
       mIsMC = isMC;
     }
 
+    void setMCComparison(bool mcComparison) {
+      mDoMCComparison = mcComparison;
+    }
+
     void setBatchJob(int currentJob, int totalJobs) {
       mIsBatchJob = true;
       mCurrentJob = currentJob;

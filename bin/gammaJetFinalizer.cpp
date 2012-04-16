@@ -227,6 +227,7 @@ void GammaJetFinalizer::runAnalysis() {
     responseBalancingGenEta013 = buildVector<TH1F>(balancingDir, "resp_balancing_gen", "eta013", 150, 0., 2.);
     responseBalancingRawGenEta013 = buildVector<TH1F>(balancingDir, "resp_balancing_raw_gen", "eta013", 150, 0., 2.);
   }
+  std::vector<TH1F*> responseBalancingEta024 = buildVector<TH1F>(balancingDir, "resp_balancing", "eta024", 150, 0., 2.);
 
   // MPF
   TFileDirectory mpfDir = analysisDir.mkdir("mpf");
@@ -243,6 +244,7 @@ void GammaJetFinalizer::runAnalysis() {
   if (mIsMC) {
     responseMPFGenEta013 = buildVector<TH1F>(mpfDir, "resp_mpf_gen", "eta013", 150, 0., 2.);
   }
+  std::vector<TH1F*> responseMPFEta024 = buildVector<TH1F>(mpfDir, "resp_mpf", "eta024", 150, 0., 2.);
 
   // Extrapolation
   int extrapolationBins = 50;
@@ -491,9 +493,12 @@ void GammaJetFinalizer::runAnalysis() {
         }
       }
 
-      // Viola
       if (fabs(firstJet.eta) < 2.4 && (fabs(firstJet.eta) < 1.4442 || fabs(firstJet.eta) > 1.5560)){ 
+        // Viola
         ptFirstJetEta024[ptBin]->Fill(firstJet.pt, eventWeight);
+
+        responseBalancingEta024[ptBin]->Fill(respBalancing, eventWeight);
+        responseMPFEta024[ptBin]->Fill(respMPF, eventWeight);
       }
 
       if (etaBin < 0) {
@@ -722,6 +727,8 @@ int main(int argc, char** argv) {
     TCLAP::ValueArg<int> totalJobsArg("", "num-jobs", "number of jobs planned", false, -1, "int", cmd);
     TCLAP::ValueArg<int> currentJobArg("", "job", "current job id", false, -1, "int", cmd);
 
+    TCLAP::SwitchArg mcComparisonArg("", "mc-comp", "Cut photon pt to avoid trigger prescale issues", cmd);
+
     cmd.parse(argc, argv);
 
     std::cout << "Initializing..." << std::endl;
@@ -741,6 +748,7 @@ int main(int argc, char** argv) {
     finalizer.setDatasetName(datasetArg.getValue());
     finalizer.setJetAlgo(typeArg.getValue(), algoArg.getValue());
     finalizer.setMC(mcArg.getValue());
+    finalizer.setMCComparison(mcComparisonArg.getValue());
     if (totalJobsArg.isSet() && currentJobArg.isSet()) {
       finalizer.setBatchJob(currentJobArg.getValue(), totalJobsArg.getValue());
     }
