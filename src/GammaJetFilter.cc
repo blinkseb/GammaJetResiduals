@@ -30,6 +30,7 @@
 
 // user include files
 #include "CommonTools/UtilAlgos/interface/TFileService.h"
+#include "CommonTools/Utils/interface/PtComparator.h"
 
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/EDFilter.h"
@@ -61,6 +62,7 @@
 #include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
 #include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
 
+#include "JetMETCorrections/Objects/interface/JetCorrector.h"
 #include "JetMETCorrections/GammaJetFilter/interface/json/json.h"
 
 #include <TParameter.h>
@@ -94,7 +96,8 @@ class GammaJetFilter : public edm::EDFilter {
       virtual bool beginLuminosityBlock(edm::LuminosityBlock&, edm::EventSetup const&);
       virtual bool endLuminosityBlock(edm::LuminosityBlock&, edm::EventSetup const&);
 
-      bool processJets(const pat::Photon& photon, const edm::Handle<pat::JetCollection>& jets, const JetAlgorithm algo, std::vector<TTree*>& trees);
+      void correctJets(pat::JetCollection& jets, edm::Event& iEvent, const edm::EventSetup& iSetup);
+      bool processJets(const pat::Photon& photon, const pat::JetCollection& jets, const JetAlgorithm algo, std::vector<TTree*>& trees);
 
       bool isValidPhotonEE(const pat::Photon& photon, const double rho);
       bool isValidPhotonEB(const pat::Photon& photon, const double rho);
@@ -113,6 +116,11 @@ class GammaJetFilter : public edm::EDFilter {
       boost::shared_ptr<Json::Value> mCurrentRunValidLumis;
       std::map<std::pair<unsigned int, unsigned int>, double> mLumiByLS;
       bool mIsValidLumiBlock;
+
+      bool mDoJEC;
+      bool mJECFromRaw;
+      std::string mCorrectorLabel;
+      GreaterByPt<pat::Jet> mSorter;
 
       bool mFirstJetPtCut;
       double mFirstJetThreshold;
@@ -192,6 +200,12 @@ GammaJetFilter::GammaJetFilter(const edm::ParameterSet& iConfig):
   mJetsAK7PFlowIT = iConfig.getUntrackedParameter<edm::InputTag>("jetsAK7PFlow", edm::InputTag("selectedPatJetsAK7PFlow"));
   mJetsAK5CaloIT = iConfig.getUntrackedParameter<edm::InputTag>("jetsAK5Calo", edm::InputTag("selectedPatJets"));
   mJetsAK7CaloIT = iConfig.getUntrackedParameter<edm::InputTag>("jetsAK7Calo", edm::InputTag("selectedPatJetsAK7Calo"));
+  mDoJEC = iConfig.getUntrackedParameter<bool>("doJetCorrection", false);
+
+  if (mDoJEC) {
+    mJECFromRaw = iConfig.getUntrackedParameter<bool>("correctJecFromRaw", false);
+    mCorrectorLabel = iConfig.getUntrackedParameter<std::string>("correctorLabel", "ak5PFResidual");
+  }
 
   mFirstJetPtCut = iConfig.getUntrackedParameter<bool>("firstJetPtCut", true);
   mFirstJetThreshold = iConfig.getUntrackedParameter<double>("firstJetThreshold", 0.3);
@@ -349,19 +363,23 @@ bool GammaJetFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
 
   // Process jets
 
-  edm::Handle<pat::JetCollection> jets;
+  edm::Handle<pat::JetCollection> jetsHandle;
 
-  iEvent.getByLabel(mJetsAK5PFlowIT, jets);
+  iEvent.getByLabel(mJetsAK5PFlowIT, jetsHandle);
+  pat::JetCollection jets = *jetsHandle;
+  if (mDoJEC) {
+    correctJets(jets, iEvent, iSetup);
+  }
   eventHasJets |= processJets(photon, jets, AK5, mJetTrees["AK5PFlow"]);
 
   /*iEvent.getByLabel(mJetsAK7PFlowIT, jets);
-  eventHasJets |= processJets(photon, jets, AK7, mJetTrees["AK7PFlow"]);
+    eventHasJets |= processJets(photon, jets, AK7, mJetTrees["AK7PFlow"]);
 
-  iEvent.getByLabel(mJetsAK5CaloIT, jets);
-  eventHasJets |= processJets(photon, jets, AK5, mJetTrees["AK5Calo"]);
+    iEvent.getByLabel(mJetsAK5CaloIT, jets);
+    eventHasJets |= processJets(photon, jets, AK5, mJetTrees["AK5Calo"]);
 
-  iEvent.getByLabel(mJetsAK7CaloIT, jets);
-  eventHasJets |= processJets(photon, jets, AK7, mJetTrees["AK7Calo"]);*/
+    iEvent.getByLabel(mJetsAK7CaloIT, jets);
+    eventHasJets |= processJets(photon, jets, AK7, mJetTrees["AK7Calo"]);*/
 
   if (! eventHasJets)
     return false;
@@ -443,15 +461,37 @@ bool GammaJetFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
   return true;
 }
 
-bool GammaJetFilter::processJets(const pat::Photon& photon, const edm::Handle<pat::JetCollection>& jets, const JetAlgorithm algo, std::vector<TTree*>& trees) {
-  if (jets->size() == 0) {
+void GammaJetFilter::correctJets(pat::JetCollection& jets, edm::Event& iEvent, const edm::EventSetup& iSetup) {
+
+  // Get Jet corrector
+  const JetCorrector* corrector = JetCorrector::getJetCorrector(mCorrectorLabel, iSetup);
+
+  // Correct jets
+  for (pat::JetCollection::iterator it = jets.begin(); it != jets.end(); ++it)  {
+    pat::Jet& jet = *it;
+
+    if (mJECFromRaw) {
+      double toRaw = jet.jecFactor("Uncorrected");
+      jet.setP4(jet.p4() * toRaw); // It's now a raw jet
+    }
+
+    double corrections = corrector->correction(jet, iEvent, iSetup);
+    jet.scaleEnergy(corrections);
+  }
+
+  // Sort collection by pt
+  std::sort(jets.begin(), jets.end(), mSorter);
+}
+
+bool GammaJetFilter::processJets(const pat::Photon& photon, const pat::JetCollection& jets, const JetAlgorithm algo, std::vector<TTree*>& trees) {
+  if (jets.size() == 0) {
     return false;
   }
 
   pat::JetCollection selectedJets;
 
-  pat::JetCollection::const_iterator it = jets->begin();
-  for (; it != jets->end(); ++it) {
+  pat::JetCollection::const_iterator it = jets.begin();
+  for (; it != jets.end(); ++it) {
 
     if (! isValidJet(*it))
       continue;
@@ -636,7 +676,7 @@ bool GammaJetFilter::isValidPhotonEB(const pat::Photon& photon, const double rho
 bool GammaJetFilter::isValidPhotonEE(const pat::Photon& photon, const double rho) {
   if (mIsMC && !photon.genPhoton())
     return false;
-  
+
   bool isValid = ! photon.hasPixelSeed();
   isValid &= photon.hadronicOverEm() < 0.05;
   isValid &= photon.sigmaIetaIeta() < 0.011;
@@ -867,8 +907,8 @@ void GammaJetFilter::muonsToTree(const edm::Handle<pat::MuonCollection>& muons, 
     //FIXME: reco::Tracks need to be keept in PF2PAT.
     //It's not the case right now, so muon ID will be incorrect
     /*muonID     &= (it->innerTrack()->numberOfValidHits() > 10);
-    muonID     &= (it->dB() < 0.02);
-    muonID     &= it->innerTrack()->hitPattern().pixelLayersWithMeasurement() >= 1;*/
+      muonID     &= (it->dB() < 0.02);
+      muonID     &= it->innerTrack()->hitPattern().pixelLayersWithMeasurement() >= 1;*/
     muonID     &= it->numberOfMatches() > 1;
     muonID     &= fabs(pv.z() - it->vertex().z()) < 1.;
 

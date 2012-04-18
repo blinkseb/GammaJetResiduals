@@ -7,6 +7,9 @@ process.load("FWCore.MessageService.MessageLogger_cfi")
 process.MessageLogger.cerr.threshold = cms.untracked.string('INFO')
 process.MessageLogger.cerr.FwkReport.reportEvery = 1000
 
+process.load('Configuration/StandardSequences/FrontierConditions_GlobalTag_cff')
+process.GlobalTag.globaltag = cms.string("GR_R_44_V13::All")
+
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 
 process.source = cms.Source("PoolSource",
@@ -30,13 +33,21 @@ options.parseArguments()
 
 fullPath = os.path.join(os.getcwd(), options.datasetName)
 
+process.load("JetMETCorrections.Configuration.JetCorrectionProducers_cff")
+
 process.gammaJet = cms.EDFilter('GammaJetFilter',
     isMC = cms.untracked.bool(False),
     photons = cms.untracked.InputTag("selectedPatPhotons"),
     firstJetPtCut = cms.untracked.bool(False),
 
     json = cms.string(os.path.join(fullPath, "lumiSummary.json")),
-    csv = cms.string(os.path.join(fullPath, "lumibyls.csv"))
+    csv = cms.string(os.path.join(fullPath, "lumibyls.csv")),
+
+    # JEC
+    doJetCorrection = cms.untracked.bool(False),
+    correctJecFromRaw = cms.untracked.bool(False),
+    #correctorLabel = cms.untracked.string("ak5PFL1FastL2L3")
+    correctorLabel = cms.untracked.string("ak5PFResidual")
     )
 
 process.p = cms.Path(process.gammaJet)

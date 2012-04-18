@@ -7,5 +7,6 @@
 <use name="DataFormats/VertexReco" />
 <use name="PhysicsTools/SelectorUtils" />
 <use name="PhysicsTools/UtilAlgos"/>
+<use name="JetMETCorrections/Objects" />
 <use name="boost" />
 <flags EDM_PLUGIN="1"/>
