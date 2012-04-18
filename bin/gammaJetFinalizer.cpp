@@ -34,6 +34,7 @@
 #include "tclap/CmdLine.h"
 
 #include "gammaJetFinalizer.h"
+#include "JECReader.h"
 
 #define RESET_COLOR "\033[m"
 #define MAKE_RED "\033[31m"
@@ -49,6 +50,7 @@ GammaJetFinalizer::GammaJetFinalizer() {
   mDoMCComparison = false;
   mNoPUReweighting = false;
   mIsBatchJob = false;
+  mUseExternalJECCorrecion = false;
 }
 
 GammaJetFinalizer::~GammaJetFinalizer() {
@@ -156,6 +158,9 @@ void GammaJetFinalizer::runAnalysis() {
 
   std::cout << std::endl << "##########" << std::endl;
   std::cout << "# " << MAKE_BLUE << "Running on " << MAKE_RED << ((mIsMC) ? "MC" : "DATA") << RESET_COLOR << std::endl;
+  if (mUseExternalJECCorrecion) {
+    std::cout << "# " << MAKE_RED << "Using external JEC " << RESET_COLOR << std::endl;
+  }
   std::cout << "##########" << std::endl << std::endl;
 
   // Output file
@@ -187,6 +192,27 @@ void GammaJetFinalizer::runAnalysis() {
     TTree* analysisTree = NULL;
     cloneTree(analysis.fChain, analysisTree);
     analysisTree->SetName("misc");*/
+
+  FactorizedJetCorrector* jetCorrector = NULL;
+  //void* jetCorrector = NULL;
+  if (mUseExternalJECCorrecion) {
+
+    std::string jecJetAlgo = "AK5";
+    if (mJetType == PF)
+      jecJetAlgo += "PF";
+    else/* if (recoType == "calo")*/
+      jecJetAlgo += "Calo";
+    /*else if (recoType == "jpt")
+      jecJetAlgo += "JPT";*/
+
+    /*if (HAS_PU_CORRECTIONS && recoType == "pf")
+      jecJetAlgo += "chs";*/
+
+    std::cout << "Using '" << jecJetAlgo << "' algorithm for external JEC" << std::endl;
+
+    const std::string payloadsFile = "jec_payloads.xml";
+    jetCorrector = makeFactorizedJetCorrectorFromXML(payloadsFile, jecJetAlgo, mIsMC);
+  }
 
   std::cout << "Processing..." << std::endl;
 
@@ -344,6 +370,27 @@ void GammaJetFinalizer::runAnalysis() {
     rawMET.GetEntry(i);
 
     misc.GetEntry(i);
+
+    if (jetCorrector) {
+      // jetCorrector isn't null. Correct raw jet with jetCorrector and rebuild the corrected jet
+      jetCorrector->setJetEta(firstRawJet.eta);
+      jetCorrector->setJetPt(firstRawJet.pt);
+      jetCorrector->setRho(misc.rho);
+      jetCorrector->setJetA(firstRawJet.jet_area);
+      jetCorrector->setNPV(analysis.nvertex);
+
+      double correction = jetCorrector->getCorrection();
+      firstJet.pt = firstRawJet.pt * correction;
+
+      jetCorrector->setJetEta(secondRawJet.eta);
+      jetCorrector->setJetPt(secondRawJet.pt);
+      jetCorrector->setRho(misc.rho);
+      jetCorrector->setJetA(secondRawJet.jet_area);
+      jetCorrector->setNPV(analysis.nvertex);
+
+      correction = jetCorrector->getCorrection();
+      secondJet.pt = secondRawJet.pt * correction;
+    }
 
     if (mIsMC) {
       computePUWeight();
@@ -663,7 +710,7 @@ void GammaJetFinalizer::checkInputFiles() {
 
       f->Close();
       delete f;
-      
+
       continue;
     }
 
@@ -735,6 +782,7 @@ int main(int argc, char** argv) {
     TCLAP::ValueArg<int> currentJobArg("", "job", "current job id", false, -1, "int", cmd);
 
     TCLAP::SwitchArg mcComparisonArg("", "mc-comp", "Cut photon pt to avoid trigger prescale issues", cmd);
+    TCLAP::SwitchArg externalJECArg("", "jec", "Use external JEC", cmd);
 
     cmd.parse(argc, argv);
 
@@ -756,6 +804,7 @@ int main(int argc, char** argv) {
     finalizer.setJetAlgo(typeArg.getValue(), algoArg.getValue());
     finalizer.setMC(mcArg.getValue());
     finalizer.setMCComparison(mcComparisonArg.getValue());
+    finalizer.setUseExternalJEC(externalJECArg.getValue());
     if (totalJobsArg.isSet() && currentJobArg.isSet()) {
       finalizer.setBatchJob(currentJobArg.getValue(), totalJobsArg.getValue());
     }

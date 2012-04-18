@@ -83,6 +83,10 @@ class GammaJetFinalizer
       mDoMCComparison = mcComparison;
     }
 
+    void setUseExternalJEC(bool useExternalJEC) {
+      mUseExternalJECCorrecion = useExternalJEC;
+    }
+
     void setBatchJob(int currentJob, int totalJobs) {
       mIsBatchJob = true;
       mCurrentJob = currentJob;
@@ -146,6 +150,7 @@ class GammaJetFinalizer
     bool mIsBatchJob;
     int mTotalJobs;
     int mCurrentJob;
+    bool mUseExternalJECCorrecion;
 
     float  mSecondJetPtThreshold;
     bool   mDoMCComparison;

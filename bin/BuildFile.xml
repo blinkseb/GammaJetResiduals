@@ -1,4 +1,6 @@
 <use name="root"/>
+<use name="xerces-c" />
+<use name="CondFormats/JetMETObjects" />
 <use name="FWCore/FWLite" />
 <use name="FWCore/Framework" />
 <use name="DataFormats/Common" />
