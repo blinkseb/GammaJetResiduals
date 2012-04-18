@@ -3,6 +3,7 @@
 #include "TChain.h"
 #include "TSystem.h"
 #include "TTree.h"
+#include <TH2D.h>
 
 #include <fstream>
 #include <sstream>
@@ -206,7 +207,10 @@ void GammaJetFinalizer::runAnalysis() {
   TH1F* h_ptPhoton_passedID = analysisDir.make<TH1F>("ptPhoton_passedID", "ptPhoton", 200, 5., 1000.);
   TH1F* h_ptFirstJet_passedID = analysisDir.make<TH1F>("ptFirstJet_passedID", "ptFirstJet", 200, 5., 1000.);
   TH1F* h_ptSecondJet_passedID = analysisDir.make<TH1F>("ptSecondJet_passedID", "ptSecondJet", 60, 0., 100.);
-  TH1F* h_MET_passedID = analysisDir.make<TH1F>("MET_passedID", "MET", 240, 0., 400.);
+  TH1F* h_MET_passedID = analysisDir.make<TH1F>("MET_passedID", "MET", 150, 0., 300.);
+
+  TH2D* h_METvsfirstJet = analysisDir.make<TH2D>("METvsfirstJet", "MET vs firstJet", 150, 0., 300., 150, 0., 500.);
+  TH2D* h_firstJetvsSecondJet = analysisDir.make<TH2D>("firstJetvsSecondJet", "firstJet vs secondJet", 60, 5., 100., 60, 5., 100.);
 
   // Balancing
   TFileDirectory balancingDir = analysisDir.mkdir("balancing");
@@ -476,6 +480,9 @@ void GammaJetFinalizer::runAnalysis() {
       h_ptFirstJet_passedID->Fill(firstJet.pt, eventWeight);
       h_ptSecondJet_passedID->Fill(secondJet.pt, eventWeight);
       h_MET_passedID->Fill(MET.et, eventWeight);
+
+      h_METvsfirstJet->Fill(MET.et, firstJet.pt, eventWeight);
+      h_firstJetvsSecondJet->Fill(firstJet.pt, secondJet.pt, eventWeight);
 
       // Special case
       if (fabs(firstJet.eta) < 1.3) {
