@@ -156,6 +156,13 @@ class GammaJetFilter : public edm::EDFilter {
       std::map<std::string, std::vector<TTree*> > mMETTrees;
       std::map<std::string, TTree*>               mMiscTrees;
 
+      // TParameters for storing current config (JEC, correctorLabel, Treshold, etc...
+      TParameter<int>*              mJECRedone;
+      TParameter<int>*              mJECFromRawParameter;
+      TNamed*                       mJECCorrectorLabel;
+      TParameter<int>*              mFirstJetPtCutParameter;
+      TParameter<double>*           mFirstJetThresholdParameter;
+
       // DEBUG
       TH1F* mDeltaPhi;
 
@@ -247,6 +254,17 @@ GammaJetFilter::GammaJetFilter(const edm::ParameterSet& iConfig):
 
    mProcessedEvents = fs->make<TParameter<long long> >("total_events", 0);
    mSelectedEvents = fs->make<TParameter<long long> >("passed_events", 0);
+
+   mJECRedone = fs->make<TParameter<int> >("jec_redone", mDoJEC);
+   mFirstJetPtCutParameter = fs->make<TParameter<int> >("cut_on_first_jet_pt", mFirstJetPtCut);
+   if (mDoJEC) {
+     mJECFromRawParameter = fs->make<TParameter<int> >("jec_from_raw_jet", mJECFromRaw);
+     mJECCorrectorLabel = fs->make<TNamed>("jec_corrector_label", mCorrectorLabel);
+   }
+
+   if (mFirstJetPtCut) {
+     mFirstJetThresholdParameter = fs->make<TParameter<double> >("cut_on_first_jet_treshold", mFirstJetThreshold);
+   }
 
    mDeltaPhi = fs->make<TH1F>("deltaPhi", "deltaPhi", 40, M_PI / 2., M_PI);
 }
