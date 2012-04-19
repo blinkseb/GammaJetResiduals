@@ -924,9 +924,9 @@ void GammaJetFilter::muonsToTree(const edm::Handle<pat::MuonCollection>& muons, 
     muonID     &= it->muonID("GlobalMuonPromptTight");
     //FIXME: reco::Tracks need to be keept in PF2PAT.
     //It's not the case right now, so muon ID will be incorrect
-    muonID     &= (it->innerTrack()->numberOfValidHits() > 10);
-    muonID     &= (it->dB() < 0.02);
-    muonID     &= it->innerTrack()->hitPattern().pixelLayersWithMeasurement() >= 1;
+    /*muonID     &= (it->innerTrack()->numberOfValidHits() > 10);
+      muonID     &= (it->dB() < 0.02);
+      muonID     &= it->innerTrack()->hitPattern().pixelLayersWithMeasurement() >= 1;*/
     muonID     &= it->numberOfMatches() > 1;
     muonID     &= fabs(pv.z() - it->vertex().z()) < 1.;
 
