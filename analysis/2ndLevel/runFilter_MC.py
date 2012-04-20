@@ -46,7 +46,7 @@ process.gammaJet = cms.EDFilter('GammaJetFilter',
     crossSection = cms.double(crossSection),
     generatedEvents = cms.uint64(int(generatedEvents)),
     ptHatMin = cms.double(ptHatMin),
-    ptHatMax = cms.double(ptHatMax)
+    ptHatMax = cms.double(ptHatMax),
 
     # JEC
     doJetCorrection = cms.untracked.bool(False),
