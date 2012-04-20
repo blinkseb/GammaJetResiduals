@@ -40,6 +40,8 @@
 #define MAKE_RED "\033[31m"
 #define MAKE_BLUE "\033[34m"
 
+#define ADD_TREES true
+
 bool EXIT = false;
 
 GammaJetFinalizer::GammaJetFinalizer() {
@@ -171,27 +173,29 @@ void GammaJetFinalizer::runAnalysis() {
     : TString::Format("PhotonJet_%s_%s_part%02d.root", mDatasetName.c_str(), postFix.c_str(), mCurrentJob).Data();
   fwlite::TFileService fs(outputFile);
 
-  /*TTree* photonTree = NULL;
-    cloneTree(photon.fChain, photonTree);
+#if ADD_TREES
+  TTree* photonTree = NULL;
+  cloneTree(photon.fChain, photonTree);
 
-    TTree* firstJetTree = NULL;
-    cloneTree(firstJet.fChain, firstJetTree);
+  TTree* firstJetTree = NULL;
+  cloneTree(firstJet.fChain, firstJetTree);
 
-    TTree* secondJetTree = NULL;
-    cloneTree(secondJet.fChain, secondJetTree);
+  TTree* secondJetTree = NULL;
+  cloneTree(secondJet.fChain, secondJetTree);
 
-    TTree* metTree = NULL;
-    cloneTree(MET.fChain, metTree);
+  TTree* metTree = NULL;
+  cloneTree(MET.fChain, metTree);
 
-    TTree* muonsTree = NULL;
-    cloneTree(muons.fChain, muonsTree);
+  TTree* muonsTree = NULL;
+  cloneTree(muons.fChain, muonsTree);
 
-    TTree* electronsTree = NULL;
-    cloneTree(electrons.fChain, electronsTree);
+  TTree* electronsTree = NULL;
+  cloneTree(electrons.fChain, electronsTree);
 
-    TTree* analysisTree = NULL;
-    cloneTree(analysis.fChain, analysisTree);
-    analysisTree->SetName("misc");*/
+  TTree* analysisTree = NULL;
+  cloneTree(analysis.fChain, analysisTree);
+  analysisTree->SetName("misc");
+#endif
 
   FactorizedJetCorrector* jetCorrector = NULL;
   //void* jetCorrector = NULL;
@@ -392,6 +396,11 @@ void GammaJetFinalizer::runAnalysis() {
       secondJet.pt = secondRawJet.pt * correction;
     }
 
+    // Debug cuts
+    /*if (MET.et > 50 || firstJet.pt > 50) {
+      continue;
+    }*/
+
     if (mIsMC) {
       computePUWeight();
     }
@@ -413,7 +422,7 @@ void GammaJetFinalizer::runAnalysis() {
 
     if (mDoMCComparison) {
       // Lowest unprescaled trigger for 2011 if at 135 GeV
-      if (photon.pt < 155)
+      if (photon.pt < 180)
         continue;
     }
 
@@ -424,13 +433,6 @@ void GammaJetFinalizer::runAnalysis() {
     h_deltaPhi->Fill(deltaPhi, eventWeight);
     h_deltaPhi_2ndJet->Fill(deltaPhi_2ndJet, eventWeight); 
     h_ptPhoton->Fill(photon.pt, eventWeight);
-
-    // Dump to Tree
-    /*photonToTree(photon);
-      firstJetToTree(firstJet);
-      if (secondJet.is_present) {
-      secondJetToTree(*secondJet);
-      }*/
 
     // Compute values
     // MPF
@@ -456,9 +458,10 @@ void GammaJetFinalizer::runAnalysis() {
 
     int ptBin = mPtBinning.getPtBin(photon.pt);
     if (ptBin < 0) {
-      //std::cout << "Photon pt " << photon.pt() << " is not covered by our pt binning. Dumping event." << std::endl;
+      std::cout << "Photon pt " << photon.pt << " is not covered by our pt binning. Dumping event." << std::endl;
       continue;
     }
+
     int ptBinGen = mPtBinning.getPtBin(genPhoton.pt);
 
     int etaBin = mEtaBinning.getBin(firstJet.eta);
@@ -521,6 +524,7 @@ void GammaJetFinalizer::runAnalysis() {
 
     if (secondJetOK) {
 
+      do {
 
       h_deltaPhi_passedID->Fill(deltaPhi, eventWeight);
       h_ptPhoton_passedID->Fill(photon.pt, eventWeight);
@@ -557,7 +561,7 @@ void GammaJetFinalizer::runAnalysis() {
 
       if (etaBin < 0) {
         //std::cout << "Jet eta " << firstJet.eta() << " is not covered by our eta binning. Dumping event." << std::endl;
-        continue;
+        break;
       }
 
 
@@ -575,13 +579,17 @@ void GammaJetFinalizer::runAnalysis() {
         responseMPFGen[etaBinGen][ptBinGen]->Fill(respMPFGen, eventWeight);
       }
 
-      /*photonTree->Fill();
-        firstJetTree->Fill();
-        secondJetTree->Fill();
-        metTree->Fill();
-        electronsTree->Fill();
-        muonsTree->Fill();
-        analysisTree->Fill();*/
+      } while (false);
+
+#if ADD_TREES
+      photonTree->Fill();
+      firstJetTree->Fill();
+      secondJetTree->Fill();
+      metTree->Fill();
+      electronsTree->Fill();
+      muonsTree->Fill();
+      analysisTree->Fill();
+#endif
 
       passedEvents++;
     }
