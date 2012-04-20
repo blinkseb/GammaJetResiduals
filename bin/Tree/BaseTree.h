@@ -28,6 +28,7 @@ class BaseTree {
     Float_t         px;
     Float_t         py;
     Float_t         pz;
+    Float_t         e;
 
     // List of branches
     TBranch        *b_is_present;   //!
@@ -85,4 +86,5 @@ void BaseTree::Init(TTree *tree)
   fChain->SetBranchAddress("px", &px, &b_px);
   fChain->SetBranchAddress("py", &py, &b_py);
   fChain->SetBranchAddress("pz", &pz, &b_pz);
+  fChain->SetBranchAddress("e", &e, NULL);
 }

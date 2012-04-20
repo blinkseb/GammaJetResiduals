@@ -769,6 +769,7 @@ void GammaJetFilter::particleToTree(const reco::Candidate* particle, TTree* t, s
   addresses.push_back(boost::shared_ptr<void>(new float((particle) ? particle->px() : 0)));
   addresses.push_back(boost::shared_ptr<void>(new float((particle) ? particle->py() : 0)));
   addresses.push_back(boost::shared_ptr<void>(new float((particle) ? particle->pz() : 0)));
+  addresses.push_back(boost::shared_ptr<void>(new float((particle) ? particle->energy() : 0)));
 
   updateBranch(t, addresses[0].get(), "is_present", "I");
   updateBranch(t, addresses[1].get(), "et");
@@ -778,6 +779,7 @@ void GammaJetFilter::particleToTree(const reco::Candidate* particle, TTree* t, s
   updateBranch(t, addresses[5].get(), "px");
   updateBranch(t, addresses[6].get(), "py");
   updateBranch(t, addresses[7].get(), "pz");
+  updateBranch(t, addresses[8].get(), "e");
 }
 
 void GammaJetFilter::photonToTree(const pat::Photon& photon) {
