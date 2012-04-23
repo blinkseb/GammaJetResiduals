@@ -17,3 +17,28 @@ git checkout cmssw_4_4
 
 cd ..
 scram b -j 9
+
+Step 2:
+-------
+
+TODO
+
+Step 3:
+-------
+
+After scram b, simply redo cmsenv to rebuild cache. Then, use
+# gammaJetFilter -h
+
+To have an overview of possible commands.
+
+For example, one can use:
+
+# gammaJetFilter -i PhotonJet_2ndLevel_Photon_Run2011.root -d Photon_Run2011 --type pf --algo ak5 --mc-comp
+
+It'll produce a file named "PhotonJet_Photon_Run2011_AK5PFlow.root", where jets are PFAK5, and where a cut on Photon pt has been applied for MC/DATA comparison
+
+One can also use:
+
+# gammaJetFilter --input-list mc_G.list -d G --type pf --algo ak5 --mc
+
+It'll produce a file named "PhotonJet_G_AK5PFlow.root". Don't forget the "--mc" flag when you're running on MC! mc_G.list must be a text file, containing one file to process per line.
