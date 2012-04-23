@@ -809,10 +809,31 @@ void GammaJetFilter::jetToTree(const pat::Jet* jet, TTree* tree, TTree* genTree)
   std::vector<boost::shared_ptr<void> > addresses;
   particleToTree(jet, tree, addresses);
 
-  float area = (jet) ? jet->jetArea() : 0;
-  updateBranch(tree, &area, "jet_area");
+  if (jet) {
+    float area = jet->jetArea();
+    updateBranch(tree, &area, "jet_area");
 
-  tree->Fill();
+    // B-Tagging
+    float tcHighEfficiency = jet->bDiscriminator("trackCountingHighEffBJetTags");
+    float tcHighPurity = jet->bDiscriminator("trackCountingHighPurBJetTags");
+
+    float ssvHighEfficiency = jet->bDiscriminator("simpleSecondaryVertexHighEffBJetTags");
+    float ssvHighPurity = jet->bDiscriminator("simpleSecondaryVertexHighPurBJetTags");
+
+    float jetProbability = jet->bDiscriminator("jetProbabilityBJetTags");
+    float jetBProbability = jet->bDiscriminator("jetBProbabilityBJetTags");
+
+    updateBranch(tree, &tcHighEfficiency, "btag_tc_high_eff");
+    updateBranch(tree, &tcHighPurity, "btag_tc_high_pur");
+    updateBranch(tree, &ssvHighEfficiency, "btag_ssv_high_eff");
+    updateBranch(tree, &ssvHighPurity, "btag_ssv_high_pur");
+    updateBranch(tree, &jetProbability, "btag_jet_probability");
+    updateBranch(tree, &jetBProbability, "btag_jet_b_probability");
+
+    tree->Fill(); // This Fill() must be called inside the {} block, otherwise it'll crash. Don't move it!
+  } else {
+    tree->Fill();
+  }
 
   if (genTree) {
     particleToTree((jet) ? jet->genJet() : NULL, genTree, addresses);

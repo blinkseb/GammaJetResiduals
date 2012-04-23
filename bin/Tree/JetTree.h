@@ -23,9 +23,15 @@ class JetTree: public BaseTree {
 
     // Declaration of leaf types
     Float_t         jet_area;
+    Float_t         btag_tc_high_eff;
+    Float_t         btag_tc_high_pur;
+    Float_t         btag_ssv_high_eff;
+    Float_t         btag_ssv_high_pur;
+    Float_t         btag_jet_probability;
+    Float_t         btag_jet_b_probability;
 
     // List of branches
-    TBranch        *b_jet_area;   //!
+    TBranch        *b_jet_area;
 
     JetTree();
 
@@ -48,4 +54,10 @@ void JetTree::Init(TTree *tree)
   BaseTree::Init(tree);
 
   fChain->SetBranchAddress("jet_area", &jet_area, &b_jet_area);
+  fChain->SetBranchAddress("btag_tc_high_eff", &btag_tc_high_eff, NULL);
+  fChain->SetBranchAddress("btag_tc_high_pur", &btag_tc_high_pur, NULL);
+  fChain->SetBranchAddress("btag_ssv_high_eff", &btag_tc_high_eff, NULL);
+  fChain->SetBranchAddress("btag_ssv_high_pur", &btag_tc_high_pur, NULL);
+  fChain->SetBranchAddress("btag_jet_probability", &btag_jet_probability, NULL);
+  fChain->SetBranchAddress("btag_jet_b_probability", &btag_jet_b_probability, NULL);
 }
