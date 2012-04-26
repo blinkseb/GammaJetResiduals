@@ -372,7 +372,7 @@ bool GammaJetFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
   }
 
   // Only one good photon per event
-  if (photonsRef.size() == 0)
+  if (photonsRef.size() > 1)
     return false;
 
   const pat::Photon& photon = photonsRef[0];
