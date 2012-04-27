@@ -177,6 +177,9 @@ void GammaJetFinalizer::runAnalysis() {
   TTree* photonTree = NULL;
   cloneTree(photon.fChain, photonTree);
 
+  TTree* genPhotonTree = NULL;
+  cloneTree(genPhoton.fChain, genPhotonTree);
+
   TTree* firstJetTree = NULL;
   cloneTree(firstJet.fChain, firstJetTree);
 
@@ -397,7 +400,7 @@ void GammaJetFinalizer::runAnalysis() {
     }
 
     // Debug cuts
-    /*if (MET.et > 50 || firstJet.pt > 50) {
+    /*if (MET.et < 100) {
       continue;
     }*/
 
@@ -406,8 +409,6 @@ void GammaJetFinalizer::runAnalysis() {
     }
 
     double eventWeight = (mIsMC) ? mPUWeight * analysis.event_weight : 1.;
-
-    //TODO: On-the-fly JEC
 
     // Event selection
     // The photon is good from previous step
@@ -458,7 +459,7 @@ void GammaJetFinalizer::runAnalysis() {
 
     int ptBin = mPtBinning.getPtBin(photon.pt);
     if (ptBin < 0) {
-      std::cout << "Photon pt " << photon.pt << " is not covered by our pt binning. Dumping event." << std::endl;
+      //std::cout << "Photon pt " << photon.pt << " is not covered by our pt binning. Dumping event." << std::endl;
       continue;
     }
 
@@ -583,6 +584,7 @@ void GammaJetFinalizer::runAnalysis() {
 
 #if ADD_TREES
       photonTree->Fill();
+      genPhotonTree->Fill();
       firstJetTree->Fill();
       secondJetTree->Fill();
       metTree->Fill();
