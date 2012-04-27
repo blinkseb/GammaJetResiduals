@@ -648,15 +648,15 @@ bool GammaJetFilter::isValidJet(const pat::Jet& jet) {
     // Jet ID
     // From https://twiki.cern.ch/twiki/bin/view/CMS/JetID
 
-    pat::Jet rawJet = jet.correctedJet("Uncorrected");
-
-    bool isValid = rawJet.neutralHadronEnergyFraction() < 0.99;
-    isValid &= rawJet.neutralEmEnergyFraction() < 0.99;
-    isValid &= rawJet.getPFConstituents().size() > 1;
-    if (fabs(rawJet.eta()) < 2.4) {
-      isValid &= rawJet.chargedHadronEnergyFraction() > 0.;
-      isValid &= rawJet.chargedMultiplicity() > 0;
-      isValid &= rawJet.chargedEmEnergyFraction() < 0.99;
+    // Jet ID works on uncorrected jets. *EnergyFraction take that into account when calculating the fraction,
+    // so there's *NO* need to use an uncorrected jet
+    bool isValid = jet.neutralHadronEnergyFraction() < 0.99;
+    isValid &= jet.neutralEmEnergyFraction() < 0.99;
+    isValid &= jet.getPFConstituents().size() > 1;
+    if (fabs(jet.eta()) < 2.4) {
+      isValid &= jet.chargedHadronEnergyFraction() > 0.;
+      isValid &= jet.chargedMultiplicity() > 0;
+      isValid &= jet.chargedEmEnergyFraction() < 0.99;
     }
 
     return isValid;
