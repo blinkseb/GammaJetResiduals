@@ -1,8 +1,9 @@
-#include "TFile.h"
-#include "TROOT.h"
-#include "TChain.h"
-#include "TSystem.h"
-#include "TTree.h"
+#include <TFile.h>
+#include <TROOT.h>
+#include <TChain.h>
+#include <TSystem.h>
+#include <TTree.h>
+#include <TParameter.h>
 #include <TH2D.h>
 
 #include <fstream>
@@ -332,6 +333,15 @@ void GammaJetFinalizer::runAnalysis() {
 
   // Viola
   std::vector<TH1F*> ptFirstJetEta024 = buildVector<TH1F>(analysisDir, "ptFirstJet", "eta024", 500, 5., 1005.);
+
+  // Luminosity
+  if (! mIsMC) {
+    // For data, there's only one file, so open it in order to read the luminosity
+    TFile* f = TFile::Open(mInputFiles[0].c_str());
+    analysisDir.make<TParameter<double>>("luminosity", static_cast<TParameter<double>*>(f->Get("gammaJet/total_luminosity"))->GetVal());
+    f->Close();
+    delete f;
+  }
 
   uint64_t totalEvents = photonChain.GetEntries();
   uint64_t passedEvents = 0;
