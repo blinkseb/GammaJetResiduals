@@ -338,7 +338,7 @@ void GammaJetFinalizer::runAnalysis() {
   if (! mIsMC) {
     // For data, there's only one file, so open it in order to read the luminosity
     TFile* f = TFile::Open(mInputFiles[0].c_str());
-    analysisDir.make<TParameter<double>>("luminosity", static_cast<TParameter<double>*>(f->Get("gammaJet/total_luminosity"))->GetVal());
+    analysisDir.make<TParameter<double> >("luminosity", static_cast<TParameter<double>*>(f->Get("gammaJet/total_luminosity"))->GetVal());
     f->Close();
     delete f;
   }
