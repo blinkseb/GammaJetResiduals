@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include "drawExtrap.h"
 #include "fitTools.h"
+#include <TParameter.h>
 
 #include "tclap/CmdLine.h"
 
@@ -139,7 +140,9 @@ int main(int argc, char* argv[]) {
       db->add_mcFile(mcQCDFile, mc2_dataset, "QCD MC", 38);
     } 
 
-    db->set_lumiNormalization(5.09868 * 1e3);
+    // Read luminosity
+    TParameter<double>* lumi = static_cast<TParameter<double>*>(dataFile->Get("analysis/luminosity"));
+    db->set_lumiNormalization(lumi->GetVal() * 1e-6);
 
     db->set_NOQ(NOQ);
     db->set_FIXM(FIXM);

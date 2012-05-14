@@ -1,5 +1,6 @@
 #include <stdlib.h>
 
+#include "TParameter.h"
 #include "TError.h"
 #include "drawBase.h"
 #include "fitTools.h"
@@ -100,7 +101,9 @@ int main(int argc, char* argv[]) {
   }
 
   // MC should already be normalized to a lumi of 1 pb-1
-  db->set_lumi(5.09868 * 1e3);
+  // Read luminosity
+  TParameter<double>* lumi = static_cast<TParameter<double>*>(dataFile->Get("analysis/luminosity"));
+  db->set_lumi(lumi->GetVal() * 1e-6);
   if (norm == "LUMI") {
     db->set_lumiNormalization();
   } else {
@@ -122,7 +125,7 @@ int main(int argc, char* argv[]) {
 
   db->drawHisto("nvertex", "Number of Reconstructed Vertices", "", "Events", log);
   db->drawHisto("nvertex_reweighted", "Number of Reconstructed Vertices (after reweighting)", "", "Events", log);
-  db->drawHisto("deltaPhi_passedID", "#delta #phi", "", "Events", log);
+  db->drawHisto("deltaPhi_passedID", "#Delta #varphi", "", "Events", log);
 
   db->drawHisto("MET_passedID", "Missing E_{T}", "GeV", "Events", log);
 

@@ -3,6 +3,7 @@
 
 #include <TFile.h>
 #include <TGraphErrors.h>
+#include <TParameter.h>
 
 #include "drawBase.h"
 #include "fitTools.h"
@@ -110,7 +111,8 @@ int main(int argc, char* argv[]) {
   }
 
   // MC should already be normalized to a lumi of 1 pb-1
-  db->set_lumi(5.09868 * 1e3);
+  TParameter<double>* lumi = static_cast<TParameter<double>*>(dataFile->Get("analysis/luminosity"));
+  db->set_lumi(lumi->GetVal() * 1e-6);
   db->set_lumiNormalization();
 
   std::string fit_rms = "RMS99";
