@@ -93,6 +93,10 @@ class GammaJetFinalizer
       mTotalJobs = totalJobs;
     }
 
+    void setUncutTrees(bool uncutTrees) {
+      mUncutTrees = uncutTrees;
+    }
+
     void runAnalysis();
 
   private:
@@ -151,6 +155,7 @@ class GammaJetFinalizer
     int mTotalJobs;
     int mCurrentJob;
     bool mUseExternalJECCorrecion;
+    bool mUncutTrees;
 
     float  mSecondJetPtThreshold;
     bool   mDoMCComparison;

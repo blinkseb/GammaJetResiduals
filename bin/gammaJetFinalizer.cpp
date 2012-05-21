@@ -412,7 +412,7 @@ void GammaJetFinalizer::runAnalysis() {
     // Debug cuts
     /*if (MET.et < 100) {
       continue;
-    }*/
+      }*/
 
     if (mIsMC) {
       computePUWeight();
@@ -533,66 +533,8 @@ void GammaJetFinalizer::runAnalysis() {
       } while (false);
     }
 
-    if (secondJetOK) {
-
-      do {
-
-      h_deltaPhi_passedID->Fill(deltaPhi, eventWeight);
-      h_ptPhoton_passedID->Fill(photon.pt, eventWeight);
-      h_ptFirstJet_passedID->Fill(firstJet.pt, eventWeight);
-      h_ptSecondJet_passedID->Fill(secondJet.pt, eventWeight);
-      h_MET_passedID->Fill(MET.et, eventWeight);
-
-      h_METvsfirstJet->Fill(MET.et, firstJet.pt, eventWeight);
-      h_firstJetvsSecondJet->Fill(firstJet.pt, secondJet.pt, eventWeight);
-
-      // Special case
-      if (fabs(firstJet.eta) < 1.3) {
-        responseBalancingEta013[ptBin]->Fill(respBalancing, eventWeight);
-        responseBalancingRawEta013[ptBin]->Fill(respBalancingRaw, eventWeight);
-
-        responseMPFEta013[ptBin]->Fill(respMPF, eventWeight);
-        responseMPFRawEta013[ptBin]->Fill(respMPFRaw, eventWeight);
-
-        if (mIsMC && ptBinGen >= 0) {
-          responseBalancingGenEta013[ptBinGen]->Fill(respBalancingGen, eventWeight);
-          responseBalancingRawGenEta013[ptBinGen]->Fill(respBalancingRawGen, eventWeight);
-
-          responseMPFGenEta013[ptBinGen]->Fill(respMPFGen, eventWeight);
-        }
-      }
-
-      if (fabs(firstJet.eta) < 2.4 && (fabs(firstJet.eta) < 1.4442 || fabs(firstJet.eta) > 1.5560)){ 
-        // Viola
-        ptFirstJetEta024[ptBin]->Fill(firstJet.pt, eventWeight);
-
-        responseBalancingEta024[ptBin]->Fill(respBalancing, eventWeight);
-        responseMPFEta024[ptBin]->Fill(respMPF, eventWeight);
-      }
-
-      if (etaBin < 0) {
-        //std::cout << "Jet eta " << firstJet.eta() << " is not covered by our eta binning. Dumping event." << std::endl;
-        break;
-      }
-
-
-      responseBalancing[etaBin][ptBin]->Fill(respBalancing, eventWeight);
-      responseBalancingRaw[etaBin][ptBin]->Fill(respBalancingRaw, eventWeight);
-
-      responseMPF[etaBin][ptBin]->Fill(respMPF, eventWeight);
-      responseMPFRaw[etaBin][ptBin]->Fill(respMPFRaw, eventWeight);
-
-      // Gen values
-      if (mIsMC && ptBinGen >= 0 && etaBinGen >= 0) {
-        responseBalancingGen[etaBinGen][ptBinGen]->Fill(respBalancingGen, eventWeight);
-        responseBalancingRawGen[etaBinGen][ptBinGen]->Fill(respBalancingRawGen, eventWeight);
-
-        responseMPFGen[etaBinGen][ptBinGen]->Fill(respMPFGen, eventWeight);
-      }
-
-      } while (false);
-
-#if ADD_TREES
+#ifdef ADD_TREES
+    if (mUncutTrees) {
       photonTree->Fill();
       genPhotonTree->Fill();
       firstJetTree->Fill();
@@ -601,6 +543,79 @@ void GammaJetFinalizer::runAnalysis() {
       electronsTree->Fill();
       muonsTree->Fill();
       analysisTree->Fill();
+    }
+#endif
+
+    if (secondJetOK) {
+
+      do {
+
+        h_deltaPhi_passedID->Fill(deltaPhi, eventWeight);
+        h_ptPhoton_passedID->Fill(photon.pt, eventWeight);
+        h_ptFirstJet_passedID->Fill(firstJet.pt, eventWeight);
+        h_ptSecondJet_passedID->Fill(secondJet.pt, eventWeight);
+        h_MET_passedID->Fill(MET.et, eventWeight);
+
+        h_METvsfirstJet->Fill(MET.et, firstJet.pt, eventWeight);
+        h_firstJetvsSecondJet->Fill(firstJet.pt, secondJet.pt, eventWeight);
+
+        // Special case
+        if (fabs(firstJet.eta) < 1.3) {
+          responseBalancingEta013[ptBin]->Fill(respBalancing, eventWeight);
+          responseBalancingRawEta013[ptBin]->Fill(respBalancingRaw, eventWeight);
+
+          responseMPFEta013[ptBin]->Fill(respMPF, eventWeight);
+          responseMPFRawEta013[ptBin]->Fill(respMPFRaw, eventWeight);
+
+          if (mIsMC && ptBinGen >= 0) {
+            responseBalancingGenEta013[ptBinGen]->Fill(respBalancingGen, eventWeight);
+            responseBalancingRawGenEta013[ptBinGen]->Fill(respBalancingRawGen, eventWeight);
+
+            responseMPFGenEta013[ptBinGen]->Fill(respMPFGen, eventWeight);
+          }
+        }
+
+        if (fabs(firstJet.eta) < 2.4 && (fabs(firstJet.eta) < 1.4442 || fabs(firstJet.eta) > 1.5560)){ 
+          // Viola
+          ptFirstJetEta024[ptBin]->Fill(firstJet.pt, eventWeight);
+
+          responseBalancingEta024[ptBin]->Fill(respBalancing, eventWeight);
+          responseMPFEta024[ptBin]->Fill(respMPF, eventWeight);
+        }
+
+        if (etaBin < 0) {
+          //std::cout << "Jet eta " << firstJet.eta() << " is not covered by our eta binning. Dumping event." << std::endl;
+          break;
+        }
+
+
+        responseBalancing[etaBin][ptBin]->Fill(respBalancing, eventWeight);
+        responseBalancingRaw[etaBin][ptBin]->Fill(respBalancingRaw, eventWeight);
+
+        responseMPF[etaBin][ptBin]->Fill(respMPF, eventWeight);
+        responseMPFRaw[etaBin][ptBin]->Fill(respMPFRaw, eventWeight);
+
+        // Gen values
+        if (mIsMC && ptBinGen >= 0 && etaBinGen >= 0) {
+          responseBalancingGen[etaBinGen][ptBinGen]->Fill(respBalancingGen, eventWeight);
+          responseBalancingRawGen[etaBinGen][ptBinGen]->Fill(respBalancingRawGen, eventWeight);
+
+          responseMPFGen[etaBinGen][ptBinGen]->Fill(respMPFGen, eventWeight);
+        }
+
+      } while (false);
+
+#if ADD_TREES
+      if (! mUncutTrees) {
+        photonTree->Fill();
+        genPhotonTree->Fill();
+        firstJetTree->Fill();
+        secondJetTree->Fill();
+        metTree->Fill();
+        electronsTree->Fill();
+        muonsTree->Fill();
+        analysisTree->Fill();
+      }
 #endif
 
       passedEvents++;
@@ -803,6 +818,7 @@ int main(int argc, char** argv) {
 
     TCLAP::SwitchArg mcComparisonArg("", "mc-comp", "Cut photon pt to avoid trigger prescale issues", cmd);
     TCLAP::SwitchArg externalJECArg("", "jec", "Use external JEC", cmd);
+    TCLAP::SwitchArg uncutTreesArg("", "uncut-trees", "Fill trees before second jet cut", cmd);
 
     cmd.parse(argc, argv);
 
@@ -825,6 +841,7 @@ int main(int argc, char** argv) {
     finalizer.setMC(mcArg.getValue());
     finalizer.setMCComparison(mcComparisonArg.getValue());
     finalizer.setUseExternalJEC(externalJECArg.getValue());
+    finalizer.setUncutTrees(uncutTreesArg.getValue());
     if (totalJobsArg.isSet() && currentJobArg.isSet()) {
       finalizer.setBatchJob(currentJobArg.getValue(), totalJobsArg.getValue());
     }
