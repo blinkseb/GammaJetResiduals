@@ -231,14 +231,21 @@ GammaJetFilter::GammaJetFilter(const edm::ParameterSet& iConfig):
    mElectronsTree = fs->make<TTree>("electrons", "electrons tree");
 
    mTotalLuminosity = fs->make<TParameter<double> >("total_luminosity", 0.);
-   if (mIsMC) {
+   
+   bool binnedSample = iConfig.getUntrackedParameter<bool>("binnedMCSample", false);
+
+   mEventsWeight = 1.;
+   mPtHatMin     = -1.;
+   mPtHatMax     = -1.;
+
+   if (mIsMC && binnedSample) {
      // Read cross section and number of generated events
-     double crossSection = iConfig.getParameter<double>("crossSection");
-     unsigned long long generatedEvents = iConfig.getParameter<unsigned long long>("generatedEvents");
+     double crossSection = iConfig.getUntrackedParameter<double>("crossSection", 1.);
+     unsigned long long generatedEvents = iConfig.getUntrackedParameter<unsigned long long>("generatedEvents", 1.);
      mEventsWeight = crossSection / (float) generatedEvents;
 
-     mPtHatMin = iConfig.getParameter<double>("ptHatMin");
-     mPtHatMax = iConfig.getParameter<double>("ptHatMax");
+     mPtHatMin = iConfig.getUntrackedParameter<double>("ptHatMin", -1.);
+     mPtHatMax = iConfig.getUntrackedParameter<double>("ptHatMax", -1.);
    } else {
      mEventsWeight = 1.;
    }
@@ -344,15 +351,22 @@ bool GammaJetFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
 
   const reco::Vertex& primaryVertex = vertices->at(0);
 
+  double generatorWeight = 1.;
+
   if (mIsMC) {
     edm::Handle<GenEventInfoProduct> eventInfos;
     iEvent.getByLabel("generator", eventInfos);
 
-    if (eventInfos.isValid() && eventInfos->hasBinningValues()) {
+    if (mPtHatMin >= 0. && mPtHatMax >= 0. && eventInfos.isValid() && eventInfos->hasBinningValues()) {
       double genPt = eventInfos->binningValues()[0];
       if (genPt < mPtHatMin || genPt > mPtHatMax) {
         return false;
       }
+    }
+
+    generatorWeight = eventInfos->weight();
+    if (generatorWeight == 0.) {
+      generatorWeight = 1.;
     }
   }
 
@@ -459,7 +473,8 @@ bool GammaJetFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
   updateBranch(mAnalysisTree, &nVertex, "nvertex", "i");
   updateBranch(mAnalysisTree, &nTrueInteractions, "ntrue_interactions");
   updateBranch(mAnalysisTree, &nPUVertex, "pu_nvertex", "I");
-  updateBranch(mAnalysisTree, &mEventsWeight, "event_weight");
+  updateBranch(mAnalysisTree, &mEventsWeight, "event_weight"); // Only valid for binned samples
+  updateBranch(mAnalysisTree, &generatorWeight, "generator_weight"); // Only valid for flat samples
 
   mAnalysisTree->Fill();
 
