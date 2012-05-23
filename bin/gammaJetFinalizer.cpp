@@ -184,8 +184,20 @@ void GammaJetFinalizer::runAnalysis() {
   TTree* firstJetTree = NULL;
   cloneTree(firstJet.fChain, firstJetTree);
 
+  TTree* firstGenJetTree = NULL;
+  cloneTree(firstGenJet.fChain, firstGenJetTree);
+
+  TTree* firstRawJetTree = NULL;
+  cloneTree(firstRawJet.fChain, firstRawJetTree);
+
   TTree* secondJetTree = NULL;
   cloneTree(secondJet.fChain, secondJetTree);
+
+  TTree* secondGenJetTree = NULL;
+  cloneTree(secondGenJet.fChain, secondGenJetTree);
+
+  TTree* secondRawJetTree = NULL;
+  cloneTree(secondRawJet.fChain, secondRawJetTree);
 
   TTree* metTree = NULL;
   cloneTree(MET.fChain, metTree);
@@ -538,7 +550,11 @@ void GammaJetFinalizer::runAnalysis() {
       photonTree->Fill();
       genPhotonTree->Fill();
       firstJetTree->Fill();
+      firstGenJetTree->Fill();
+      firstRawJetTree->Fill();
       secondJetTree->Fill();
+      secondGenJetTree->Fill();
+      secondRawJetTree->Fill();
       metTree->Fill();
       electronsTree->Fill();
       muonsTree->Fill();
@@ -610,7 +626,11 @@ void GammaJetFinalizer::runAnalysis() {
         photonTree->Fill();
         genPhotonTree->Fill();
         firstJetTree->Fill();
+        firstGenJetTree->Fill();
+        firstRawJetTree->Fill();
         secondJetTree->Fill();
+        secondGenJetTree->Fill();
+        secondRawJetTree->Fill();
         metTree->Fill();
         electronsTree->Fill();
         muonsTree->Fill();
