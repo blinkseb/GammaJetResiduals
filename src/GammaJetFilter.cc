@@ -826,34 +826,39 @@ void GammaJetFilter::jetToTree(const pat::Jet* jet, TTree* tree, TTree* genTree)
   std::vector<boost::shared_ptr<void> > addresses;
   particleToTree(jet, tree, addresses);
 
-  if (jet) {
-    float area = jet->jetArea();
-    updateBranch(tree, &area, "jet_area");
+  float area = (jet) ? jet->jetArea() : 0;
+  updateBranch(tree, &area, "jet_area");
 
-    // B-Tagging
-    float tcHighEfficiency = jet->bDiscriminator("trackCountingHighEffBJetTags");
-    float tcHighPurity = jet->bDiscriminator("trackCountingHighPurBJetTags");
+  // B-Tagging
+  float tcHighEfficiency = (jet) ? jet->bDiscriminator("trackCountingHighEffBJetTags") : -1;
+  float tcHighPurity = (jet) ? jet->bDiscriminator("trackCountingHighPurBJetTags") : -1;
 
-    float ssvHighEfficiency = jet->bDiscriminator("simpleSecondaryVertexHighEffBJetTags");
-    float ssvHighPurity = jet->bDiscriminator("simpleSecondaryVertexHighPurBJetTags");
+  float ssvHighEfficiency = (jet) ? jet->bDiscriminator("simpleSecondaryVertexHighEffBJetTags") : -1;
+  float ssvHighPurity = (jet) ? jet->bDiscriminator("simpleSecondaryVertexHighPurBJetTags") : -1;
 
-    float jetProbability = jet->bDiscriminator("jetProbabilityBJetTags");
-    float jetBProbability = jet->bDiscriminator("jetBProbabilityBJetTags");
+  float jetProbability = (jet) ? jet->bDiscriminator("jetProbabilityBJetTags") : -1;
+  float jetBProbability = (jet) ? jet->bDiscriminator("jetBProbabilityBJetTags") : -1;
 
-    updateBranch(tree, &tcHighEfficiency, "btag_tc_high_eff");
-    updateBranch(tree, &tcHighPurity, "btag_tc_high_pur");
-    updateBranch(tree, &ssvHighEfficiency, "btag_ssv_high_eff");
-    updateBranch(tree, &ssvHighPurity, "btag_ssv_high_pur");
-    updateBranch(tree, &jetProbability, "btag_jet_probability");
-    updateBranch(tree, &jetBProbability, "btag_jet_b_probability");
+  updateBranch(tree, &tcHighEfficiency, "btag_tc_high_eff");
+  updateBranch(tree, &tcHighPurity, "btag_tc_high_pur");
+  updateBranch(tree, &ssvHighEfficiency, "btag_ssv_high_eff");
+  updateBranch(tree, &ssvHighPurity, "btag_ssv_high_pur");
+  updateBranch(tree, &jetProbability, "btag_jet_probability");
+  updateBranch(tree, &jetBProbability, "btag_jet_b_probability");
 
-    tree->Fill(); // This Fill() must be called inside the {} block, otherwise it'll crash. Don't move it!
-  } else {
-    tree->Fill();
-  }
+  tree->Fill();
 
   if (genTree) {
     particleToTree((jet) ? jet->genJet() : NULL, genTree, addresses);
+
+    // Add parton id
+    const reco::Candidate* parton = (jet) ? jet->genParton() : NULL;
+    int pdgId = (parton) ? parton->pdgId() : 0;
+    updateBranch(genTree, &pdgId, "parton_pdg_id", "I");
+
+    int flavour = (jet) ? jet->partonFlavour() : 0;
+    updateBranch(genTree, &flavour, "parton_flavour", "I");
+
     genTree->Fill();
   }
 }

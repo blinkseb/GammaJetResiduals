@@ -4,6 +4,7 @@
 #include "Tree/PhotonTree.h"
 #include "Tree/LeptonTree.h"
 #include "Tree/JetTree.h"
+#include "Tree/GenJetTree.h"
 #include "Tree/METTree.h"
 #include "Tree/MiscTree.h"
 
@@ -129,11 +130,11 @@ class GammaJetFinalizer
 
     JetTree firstJet;
     JetTree firstRawJet;
-    GenTree firstGenJet;
+    GenJetTree firstGenJet;
 
     JetTree secondJet;
     JetTree secondRawJet;
-    GenTree secondGenJet;
+    GenJetTree secondGenJet;
 
     METTree MET;
     GenTree genMET;
