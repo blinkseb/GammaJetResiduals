@@ -431,6 +431,9 @@ void GammaJetFinalizer::runAnalysis() {
     }
 
     double eventWeight = (mIsMC) ? mPUWeight * analysis.event_weight : 1.;
+#ifdef ADD_TREES
+    analysis.event_weight = eventWeight;
+#endif
 
     // Event selection
     // The photon is good from previous step
