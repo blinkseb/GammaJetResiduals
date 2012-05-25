@@ -176,7 +176,11 @@ process.out.outputCommands = cms.untracked.vstring('drop *',
     # Content of *patEventContentNoCleaning
     'keep *_selectedPatPhotons*_*_*', 'keep *_selectedPatElectrons*_*_*', 'keep *_selectedPatMuons*_*_*', 'keep *_selectedPatTaus*_*_*', 'keep *_selectedPatJets*_*_*', 'drop *_selectedPatJets_pfCandidates_*', 'drop *_*PF_caloTowers_*', 'drop *_*JPT_pfCandidates_*', 'drop *_*Calo_pfCandidates_*', 'keep *_patMETs*_*_*', 'keep *_selectedPatPFParticles*_*_*', 'keep *_selectedPatTrackCands*_*_*',
     'drop *_*PFlow_caloTowers_*',
-    'keep *recoTracks_generalTracks_*_*'
+    'keep *recoTracks_generalTracks_*_*',
+    # Type I residual
+    'drop *_selectedPatJetsForMET*_*_PAT',
+    #'keep *_reducedEcalRecHitsEE_*_*'
+    'keep *_hybridSuperClusters_hybridBarrelBasicClusters_*'
     )
 
 # switch on PAT trigger
@@ -192,7 +196,7 @@ process.GlobalTag.globaltag = cms.string("GR_R_44_V13::All") ##  (according to h
 #                                         ##
 process.source.fileNames =  cms.untracked.vstring('file:input_data.root')  ##  (e.g. 'file:AOD.root')
 #                                         ##
-process.maxEvents.input = 100
+process.maxEvents.input = 30000
 #                                         ##
 #   process.out.outputCommands = [ ... ]  ##  (e.g. taken from PhysicsTools/PatAlgos/python/patEventContent_cff.py)
 #                                         ##

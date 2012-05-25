@@ -34,8 +34,9 @@
 
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/EDFilter.h"
-
+#include "FWCore/Framework/interface/ESHandle.h"
 #include "FWCore/Framework/interface/Event.h"
+#include "FWCore/Framework/interface/EventSetup.h"
 #include "FWCore/Framework/interface/LuminosityBlock.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
 #include "FWCore/Framework/interface/Run.h"
@@ -49,6 +50,7 @@
 #include "DataFormats/Math/interface/deltaPhi.h"
 #include "DataFormats/Math/interface/deltaR.h"
 #include "DataFormats/Common/interface/Ref.h"
+#include "DataFormats/EcalRecHit/interface/EcalRecHitCollections.h"
 #include "DataFormats/PatCandidates/interface/Electron.h"
 #include "DataFormats/PatCandidates/interface/Jet.h"
 #include "DataFormats/PatCandidates/interface/MET.h"
@@ -57,7 +59,12 @@
 #include "DataFormats/VertexReco/interface/Vertex.h"
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
 
+#include "Geometry/CaloTopology/interface/CaloTopology.h"
+#include "Geometry/Records/interface/CaloTopologyRecord.h"
+
 #include "PhysicsTools/SelectorUtils/interface/JetIDSelectionFunctor.h"
+
+#include "RecoEcal/EgammaCoreTools/interface/EcalClusterTools.h"
 
 #include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
 #include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
@@ -99,8 +106,10 @@ class GammaJetFilter : public edm::EDFilter {
       void correctJets(pat::JetCollection& jets, edm::Event& iEvent, const edm::EventSetup& iSetup);
       bool processJets(const pat::Photon& photon, const pat::JetCollection& jets, const JetAlgorithm algo, std::vector<TTree*>& trees);
 
-      bool isValidPhotonEE(const pat::Photon& photon, const double rho);
-      bool isValidPhotonEB(const pat::Photon& photon, const double rho);
+      //const EcalRecHitCollection* getEcalRecHitCollection(const reco::BasicCluster& cluster);
+      bool isValidPhotonEB(const pat::Photon& photon, const double rho, const EcalRecHitCollection& recHits, const CaloTopology& topology);
+      //bool isValidPhotonEE(const pat::Photon& photon, const double rho);
+      //bool isValidPhotonEB(const pat::Photon& photon, const double rho);
       bool isValidJet(const pat::Jet& jet);
 
       void readJSONFile();
@@ -373,6 +382,14 @@ bool GammaJetFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
   edm::Handle<double> pFlowRho;
   iEvent.getByLabel(edm::InputTag("kt6PFJetsAK5PFlow", "rho"), pFlowRho);
 
+
+  // Necesseray collection for calculate sigmaIPhiIPhi
+  edm::Handle<EcalRecHitCollection> recHits;
+  iEvent.getByLabel(edm::InputTag("reducedEcalRecHitsEB"), recHits);
+
+  edm::ESHandle<CaloTopology> topology;
+  iSetup.get<CaloTopologyRecord>().get(topology);
+
   edm::Handle<pat::PhotonCollection> photons;
   iEvent.getByLabel(mPhotonsIT, photons);
 
@@ -380,7 +397,7 @@ bool GammaJetFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
 
   pat::PhotonCollection::const_iterator it = photons->begin();
   for (; it != photons->end(); ++it) {
-    if (isValidPhotonEB(*it, *pFlowRho) && fabs(it->eta()) <= 1.3) {
+    if (fabs(it->eta()) <= 1.3 && isValidPhotonEB(*it, *pFlowRho, *recHits, *topology)) {
       photonsRef.push_back(*it);
     }
   }
@@ -694,7 +711,7 @@ bool GammaJetFilter::isValidJet(const pat::Jet& jet) {
   return false;
 }
 
-bool GammaJetFilter::isValidPhotonEB(const pat::Photon& photon, const double rho) {
+bool GammaJetFilter::isValidPhotonEB(const pat::Photon& photon, const double rho, const EcalRecHitCollection& recHits, const CaloTopology& topology) {
   if (mIsMC && !photon.genPhoton())
     return false;
 
@@ -705,10 +722,21 @@ bool GammaJetFilter::isValidPhotonEB(const pat::Photon& photon, const double rho
   isValid &= photon.ecalRecHitSumEtConeDR04() < (4.2 + 0.006 * photon.et() + 0.183 * rho);
   isValid &= photon.hcalTowerSumEtConeDR04() < (2.2 + 0.0025 * photon.et() + 0.062 * rho);
 
+  if (isValid) {
+    // Get sigmaIPhiIPhi for photon
+    const float w0 = 4.7; // See http://cmslxr.fnal.gov/lxr/source/RecoEcal/EgammaCoreTools/interface/EcalClusterLazyTools.h#087
+
+    std::vector<float> covariances = EcalClusterTools::localCovariances(*photon.superCluster()->seed(), &recHits, &topology, w0);
+    float sigmaIPhiIPhi = sqrt(covariances[2]);
+
+    std::cout << "sigmaIPhiIPhi: " << sigmaIPhiIPhi << std::endl;
+    isValid &= sigmaIPhiIPhi < 0.001;
+  }
+
   return isValid;
 }
 
-bool GammaJetFilter::isValidPhotonEE(const pat::Photon& photon, const double rho) {
+/*bool GammaJetFilter::isValidPhotonEE(const pat::Photon& photon, const double rho) {
   if (mIsMC && !photon.genPhoton())
     return false;
 
@@ -720,7 +748,7 @@ bool GammaJetFilter::isValidPhotonEE(const pat::Photon& photon, const double rho
   isValid &= photon.hcalTowerSumEtConeDR04() < (2.2 + 0.0025 * photon.et() + 0.180 * rho);
 
   return isValid;
-}
+}*/
 
 void GammaJetFilter::readJSONFile() {
   Json::Value root;
