@@ -177,7 +177,10 @@ process.out.outputCommands = cms.untracked.vstring('drop *',
     'drop *_*PFlow_caloTowers_*',
     'keep *_addPileupInfo_*_*',
     'keep *recoTracks_generalTracks_*_*',
-    'keep *_generator_*_*'
+    'keep *_generator_*_*',
+    # For Photon ID
+    'keep *_reducedEcalRecHitsEB_*_*',
+    'keep *_hybridSuperClusters_hybridBarrelBasicClusters_*'
     )
 
 # switch on PAT trigger

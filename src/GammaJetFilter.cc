@@ -107,7 +107,7 @@ class GammaJetFilter : public edm::EDFilter {
       bool processJets(const pat::Photon& photon, const pat::JetCollection& jets, const JetAlgorithm algo, std::vector<TTree*>& trees);
 
       //const EcalRecHitCollection* getEcalRecHitCollection(const reco::BasicCluster& cluster);
-      bool isValidPhotonEB(const pat::Photon& photon, const double rho, const EcalRecHitCollection& recHits, const CaloTopology& topology);
+      bool isValidPhotonEB(const pat::Photon& photon, const double rho, const EcalRecHitCollection* recHits, const CaloTopology& topology);
       //bool isValidPhotonEE(const pat::Photon& photon, const double rho);
       //bool isValidPhotonEB(const pat::Photon& photon, const double rho);
       bool isValidJet(const pat::Jet& jet);
@@ -382,10 +382,10 @@ bool GammaJetFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
   edm::Handle<double> pFlowRho;
   iEvent.getByLabel(edm::InputTag("kt6PFJetsAK5PFlow", "rho"), pFlowRho);
 
-
   // Necesseray collection for calculate sigmaIPhiIPhi
   edm::Handle<EcalRecHitCollection> recHits;
   iEvent.getByLabel(edm::InputTag("reducedEcalRecHitsEB"), recHits);
+  const EcalRecHitCollection* pRecHits = (recHits.isValid()) ? recHits.product() : NULL;
 
   edm::ESHandle<CaloTopology> topology;
   iSetup.get<CaloTopologyRecord>().get(topology);
@@ -397,7 +397,7 @@ bool GammaJetFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
 
   pat::PhotonCollection::const_iterator it = photons->begin();
   for (; it != photons->end(); ++it) {
-    if (fabs(it->eta()) <= 1.3 && isValidPhotonEB(*it, *pFlowRho, *recHits, *topology)) {
+    if (fabs(it->eta()) <= 1.3 && isValidPhotonEB(*it, *pFlowRho, pRecHits, *topology)) {
       photonsRef.push_back(*it);
     }
   }
@@ -711,7 +711,7 @@ bool GammaJetFilter::isValidJet(const pat::Jet& jet) {
   return false;
 }
 
-bool GammaJetFilter::isValidPhotonEB(const pat::Photon& photon, const double rho, const EcalRecHitCollection& recHits, const CaloTopology& topology) {
+bool GammaJetFilter::isValidPhotonEB(const pat::Photon& photon, const double rho, const EcalRecHitCollection* recHits, const CaloTopology& topology) {
   if (mIsMC && !photon.genPhoton())
     return false;
 
@@ -723,20 +723,29 @@ bool GammaJetFilter::isValidPhotonEB(const pat::Photon& photon, const double rho
   isValid &= photon.hcalTowerSumEtConeDR04() < (2.2 + 0.0025 * photon.et() + 0.062 * rho);
 
   if (isValid) {
-    // Get sigmaIPhiIPhi for photon
-    const float w0 = 4.7; // See http://cmslxr.fnal.gov/lxr/source/RecoEcal/EgammaCoreTools/interface/EcalClusterLazyTools.h#087
+    // Spike cleaning
 
-    std::vector<float> covariances = EcalClusterTools::localCovariances(*photon.superCluster()->seed(), &recHits, &topology, w0);
-    float sigmaIPhiIPhi = sqrt(covariances[2]);
+    isValid &= photon.sigmaIetaIeta() > 0.001;
 
-    isValid &= sigmaIPhiIPhi > 0.001 && photon.sigmaIetaIeta() > 0.001;
-    if (!isValid) {
-      std::cout << "Spike detected!" << std::endl;
-      std::cout << "sigmaIPhiIPhi: " << sigmaIPhiIPhi << std::endl;
-      std::cout << "sigmaIetaIeta: " << photon.sigmaIetaIeta() << std::endl;
-    } else {
-      std::cout << "Passed!" << std::endl;
-    }
+    do {
+      // Get sigmaIPhiIPhi for photon
+      const float w0 = 4.7; // See http://cmslxr.fnal.gov/lxr/source/RecoEcal/EgammaCoreTools/interface/EcalClusterLazyTools.h#087
+      if (! recHits)
+        break;
+
+      reco::SuperClusterRef superCluster = photon.superCluster();
+      if (superCluster.isNull())
+        break;
+
+      reco::CaloClusterPtr caloCluster = superCluster->seed();
+      if (caloCluster.isNull())
+        break;
+
+      std::vector<float> covariances = EcalClusterTools::localCovariances(*caloCluster, recHits, &topology, w0);
+      float sigmaIPhiIPhi = sqrt(covariances[2]);
+
+      isValid &= sigmaIPhiIPhi > 0.001;
+    } while (false);
   }
 
   return isValid;
