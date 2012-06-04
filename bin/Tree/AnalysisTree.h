@@ -24,7 +24,7 @@ class AnalysisTree {
     UInt_t          nvertex;
     Int_t           pu_nvertex;
     Float_t         event_weight;
-    Float_t         generator_weight;
+    Double_t        generator_weight;
 
     // List of branches
     TBranch        *b_ntrue_interactions;   //!

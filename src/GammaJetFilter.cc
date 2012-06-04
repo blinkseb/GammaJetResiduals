@@ -241,22 +241,18 @@ GammaJetFilter::GammaJetFilter(const edm::ParameterSet& iConfig):
 
    mTotalLuminosity = fs->make<TParameter<double> >("total_luminosity", 0.);
    
-   bool binnedSample = iConfig.getUntrackedParameter<bool>("binnedMCSample", false);
-
    mEventsWeight = 1.;
    mPtHatMin     = -1.;
    mPtHatMax     = -1.;
 
-   if (mIsMC && binnedSample) {
+   if (mIsMC) {
      // Read cross section and number of generated events
-     double crossSection = iConfig.getUntrackedParameter<double>("crossSection", 1.);
-     unsigned long long generatedEvents = iConfig.getUntrackedParameter<unsigned long long>("generatedEvents", 1.);
+     double crossSection = iConfig.getParameter<double>("crossSection");
+     unsigned long long generatedEvents = iConfig.getParameter<unsigned long long>("generatedEvents");
      mEventsWeight = crossSection / (float) generatedEvents;
 
      mPtHatMin = iConfig.getUntrackedParameter<double>("ptHatMin", -1.);
      mPtHatMax = iConfig.getUntrackedParameter<double>("ptHatMax", -1.);
-   } else {
-     mEventsWeight = 1.;
    }
 
    mJetCollections.push_back("AK5PFlow");
@@ -366,14 +362,18 @@ bool GammaJetFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
     edm::Handle<GenEventInfoProduct> eventInfos;
     iEvent.getByLabel("generator", eventInfos);
 
-    if (mPtHatMin >= 0. && mPtHatMax >= 0. && eventInfos.isValid() && eventInfos->hasBinningValues()) {
+    if (eventInfos.isValid() && eventInfos->hasBinningValues()) {
       double genPt = eventInfos->binningValues()[0];
-      if (genPt < mPtHatMin || genPt > mPtHatMax) {
+
+      if (mPtHatMin >= 0. && genPt < mPtHatMin)
         return false;
-      }
+
+      if (mPtHatMax >= 0. && genPt > mPtHatMax)
+        return false;
     }
 
     generatorWeight = eventInfos->weight();
+    std::cout << generatorWeight << std::endl;
     if (generatorWeight == 0.) {
       generatorWeight = 1.;
     }
@@ -491,7 +491,7 @@ bool GammaJetFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
   updateBranch(mAnalysisTree, &nTrueInteractions, "ntrue_interactions");
   updateBranch(mAnalysisTree, &nPUVertex, "pu_nvertex", "I");
   updateBranch(mAnalysisTree, &mEventsWeight, "event_weight"); // Only valid for binned samples
-  updateBranch(mAnalysisTree, &generatorWeight, "generator_weight"); // Only valid for flat samples
+  updateBranch(mAnalysisTree, &generatorWeight, "generator_weight", "D"); // Only valid for flat samples
 
   mAnalysisTree->Fill();
 
@@ -729,8 +729,14 @@ bool GammaJetFilter::isValidPhotonEB(const pat::Photon& photon, const double rho
     std::vector<float> covariances = EcalClusterTools::localCovariances(*photon.superCluster()->seed(), &recHits, &topology, w0);
     float sigmaIPhiIPhi = sqrt(covariances[2]);
 
-    std::cout << "sigmaIPhiIPhi: " << sigmaIPhiIPhi << std::endl;
-    isValid &= sigmaIPhiIPhi < 0.001;
+    isValid &= sigmaIPhiIPhi > 0.001 && photon.sigmaIetaIeta() > 0.001;
+    if (!isValid) {
+      std::cout << "Spike detected!" << std::endl;
+      std::cout << "sigmaIPhiIPhi: " << sigmaIPhiIPhi << std::endl;
+      std::cout << "sigmaIetaIeta: " << photon.sigmaIetaIeta() << std::endl;
+    } else {
+      std::cout << "Passed!" << std::endl;
+    }
   }
 
   return isValid;
@@ -738,7 +744,7 @@ bool GammaJetFilter::isValidPhotonEB(const pat::Photon& photon, const double rho
 
 /*bool GammaJetFilter::isValidPhotonEE(const pat::Photon& photon, const double rho) {
   if (mIsMC && !photon.genPhoton())
-    return false;
+  return false;
 
   bool isValid = ! photon.hasPixelSeed();
   isValid &= photon.hadronicOverEm() < 0.05;
@@ -748,7 +754,7 @@ bool GammaJetFilter::isValidPhotonEB(const pat::Photon& photon, const double rho
   isValid &= photon.hcalTowerSumEtConeDR04() < (2.2 + 0.0025 * photon.et() + 0.180 * rho);
 
   return isValid;
-}*/
+  }*/
 
 void GammaJetFilter::readJSONFile() {
   Json::Value root;
@@ -998,8 +1004,8 @@ void GammaJetFilter::muonsToTree(const edm::Handle<pat::MuonCollection>& muons, 
     //FIXME: reco::Tracks need to be keept in PF2PAT.
     //It's not the case right now, so muon ID will be incorrect
     /*muonID     &= (it->innerTrack().isNonnull() && it->innerTrack()->numberOfValidHits() > 10);
-    muonID     &= (it->dB() < 0.02);
-    muonID     &= it->innerTrack().isNonnull() && it->innerTrack()->hitPattern().pixelLayersWithMeasurement() >= 1;*/
+      muonID     &= (it->dB() < 0.02);
+      muonID     &= it->innerTrack().isNonnull() && it->innerTrack()->hitPattern().pixelLayersWithMeasurement() >= 1;*/
     muonID     &= it->numberOfMatches() > 1;
     muonID     &= fabs(pv.z() - it->vertex().z()) < 1.;
 

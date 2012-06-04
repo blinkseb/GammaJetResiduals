@@ -7,6 +7,7 @@ process.load("FWCore.MessageService.MessageLogger_cfi")
 process.MessageLogger.cerr.threshold = cms.untracked.string('INFO')
 process.MessageLogger.cerr.FwkReport.reportEvery = 1000
 
+process.load("Configuration/StandardSequences/GeometryDB_cff")
 process.load('Configuration/StandardSequences/FrontierConditions_GlobalTag_cff')
 process.GlobalTag.globaltag = cms.string("START44_V13::All")
 
@@ -15,9 +16,9 @@ process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 from FWCore.ParameterSet.VarParsing import VarParsing
 maxEvents = cms.untracked.PSet( input = cms.untracked.int32(-1) )
 readFiles = cms.untracked.vstring(
-    #"/store/user/sbrochet/G_Pt-30to50_TuneZ2_7TeV_pythia6/JetMet_PF2PAT_Fall11/5105f901d1c8d136e9eaa25f22cecd3a/patTuple_PF2PAT_MC_59_1_3LQ.root"
+    "/store/user/sbrochet/G_Pt-30to50_TuneZ2_7TeV_pythia6/JetMet_PF2PAT_01apr_Fall11/5105f901d1c8d136e9eaa25f22cecd3a/patTuple_PF2PAT_MC_54_3_zYV.root"
     #"file:patTuple_PF2PAT_MC.root"
-    "/store/user/sbrochet/G_Pt-120to170_TuneZ2star_8TeV_pythia6/JetMet_PF2PAT_01apr_Summer12/7dd90f19ebb89f404e8c497cae6b6c9f/patTuple_PF2PAT_MC_17_1_Zvq.root"
+    #"/store/user/sbrochet/G_Pt-120to170_TuneZ2star_8TeV_pythia6/JetMet_PF2PAT_01apr_Summer12/7dd90f19ebb89f404e8c497cae6b6c9f/patTuple_PF2PAT_MC_17_1_Zvq.root"
     )
 process.source = cms.Source ("PoolSource", fileNames = readFiles)
 
@@ -38,17 +39,29 @@ if os.path.exists(options.datasetName):
   f = open(file, "r");
   (generatedEvents, crossSection, ptHatMax, ptHatMin) = f.read().split()
   f.close()
-  binnedSample = True
 else:
-  binnedSample = False
-  generatedEvents = crossSection = ptHatMax = ptHatMin = 1
+  raise IOError("A folder named '%s' must exists", options.datasetName)
+
+generatedEvents = int(generatedEvents)
+crossSection = float(crossSection)
+ptHatMax = float(ptHatMax)
+ptHatMin = float(ptHatMin)
+
+print("Running on sample with:")
+print("\tNumber of generated events: %d" % generatedEvents)
+print("\tCross-section: %f" % crossSection)
+print("\tPt hat min: %f" % ptHatMin)
+print("\tPt hat max: %f" % ptHatMax)
 
 process.gammaJet = cms.EDFilter('GammaJetFilter',
     isMC = cms.untracked.bool(True),
     photons = cms.untracked.InputTag("selectedPatPhotons"),
     firstJetPtCut = cms.untracked.bool(False),
 
-    binnedSample = cms.untracked.bool(binnedSample),
+    crossSection = cms.double(crossSection),
+    generatedEvents = cms.uint64(int(generatedEvents)),
+    ptHatMin = cms.untracked.double(ptHatMin),
+    ptHatMax = cms.untracked.double(ptHatMax),
 
     # JEC
     doJetCorrection = cms.untracked.bool(False),
@@ -56,13 +69,6 @@ process.gammaJet = cms.EDFilter('GammaJetFilter',
     #correctorLabel = cms.untracked.string("ak5PFL1FastL2L3")
     correctorLabel = cms.untracked.string("ak5PFResidual")
     )
-
-if binnedSample:
-  process.gammaJet.crossSection = cms.untracked.double(crossSection)
-  process.gammaJet.generatedEvents = cms.untracked.uint64(int(generatedEvents))
-  process.gammaJet.ptHatMin = cms.untracked.double(ptHatMin)
-  process.gammaJet.ptHatMax = cms.untracked.double(ptHatMax)
-
 
 process.p = cms.Path(process.gammaJet)
 
