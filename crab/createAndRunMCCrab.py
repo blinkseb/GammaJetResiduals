@@ -21,7 +21,11 @@ datasets = {
     "/G_Pt-1800_TuneZ2star_8TeV_pythia6/Summer12_DR53X-PU_S10_START53_V7A-v1/AODSIM": "G_Pt-1800",
 
     # QCD
-    "/QCD_Pt-15to3000_TuneZ2star_Flat_8TeV_pythia6/Summer12_DR53X-PU_S10_START53_V7A-v1/AODSIM": "QCD_Pt-15-3000",
+    "/QCD_Pt_30_80_EMEnriched_TuneZ2star_8TeV_pythia6/Summer12_DR53X-PU_S10_START53_V7A-v1/AODSIM": "QCD_Pt-30to80",
+    "/QCD_Pt_80_170_EMEnriched_TuneZ2star_8TeV_pythia6/Summer12_DR53X-PU_S10_START53_V7A-v1/AODSIM": "QCD_Pt-80to170",
+    "/QCD_Pt_170_250_EMEnriched_TuneZ2star_8TeV_pythia6/Summer12_DR53X-PU_S10_START53_V7A-v1/AODSIM": "QCD_Pt-170to250",
+    "/QCD_Pt_250_350_EMEnriched_TuneZ2star_8TeV_pythia6/Summer12_DR53X-PU_S10_START53_V7A-v1/AODSIM": "QCD_Pt-250to350",
+    "/QCD_Pt_350_EMEnriched_TuneZ2star_8TeV_pythia6/Summer12_DR53X-PU_S10_START53_V7A-v1/AODSIM": "QCD_Pt-350",
     }
 
 # Get email address
@@ -49,6 +53,15 @@ for dataset_path, dataset_name in datasets.items():
 
   os.system("sed -e \"s#@datasetname@#%s#\" -e \"s#@uiworkingdir@#%s#g\" -e \"s#@publish_data_name@#%s#g\" -e \"s#@email@#%s#g\" crab_MC.cfg.template.ipnl > %s" % (dataset_path, ui_working_dir, publish_name, email, output_file))
 
-  cmd = "crab -create -submit -cfg %s" % (output_file)
   if options.run:
+    cmd = "crab -create -cfg %s" % (output_file)
+    os.system(cmd)
+
+    cmd = "crab -submit 1-500 -c %s" % (ui_working_dir)
+    os.system(cmd)
+
+    cmd = "crab -submit 500-1000 -c %s" % (ui_working_dir)
+    os.system(cmd)
+
+    cmd = "crab -submit 1000-1500 -c %s" % (ui_working_dir)
     os.system(cmd)
