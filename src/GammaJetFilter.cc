@@ -118,7 +118,7 @@ class GammaJetFilter : public edm::EDFilter {
 
     void correctJets(pat::JetCollection& jets, edm::Event& iEvent, const edm::EventSetup& iSetup);
     void extractRawJets(pat::JetCollection& jets);
-    void processJets(const pat::Photon& photon, pat::JetCollection& jets, const JetAlgorithm algo, edm::Handle<edm::ValueMap<float>>& qgTagMLP, edm::Handle<edm::ValueMap<float>>& qgTagLikelihood, const edm::Handle<pat::JetCollection>& handleForRef, std::vector<TTree*>& trees);
+    void processJets(const pat::PhotonRef& photon, pat::JetCollection& jets, const JetAlgorithm algo, edm::Handle<edm::ValueMap<float>>& qgTagMLP, edm::Handle<edm::ValueMap<float>>& qgTagLikelihood, const edm::Handle<pat::JetCollection>& handleForRef, std::vector<TTree*>& trees);
 
     void correctMETWithTypeI(const pat::MET& rawMet, pat::MET& met, const pat::JetCollection& jets);
 
@@ -224,7 +224,7 @@ class GammaJetFilter : public edm::EDFilter {
 
     void updateBranchArray(TTree* tree, void* address, const std::string& name, const std::string& size, const std::string& type = "F");
 
-    void photonToTree(const pat::Photon& photon);
+    void photonToTree(const pat::PhotonRef& photon, const edm::Event& event);
     void metsToTree(const pat::MET& met, const pat::MET& rawMet, const std::vector<TTree*>& trees);
     void metToTree(const pat::MET* met, TTree* tree, TTree* genTree);
     void jetsToTree(const pat::Jet* firstJet, const pat::Jet* secondJet, const std::vector<TTree*>& trees);
@@ -521,7 +521,7 @@ bool GammaJetFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
   edm::Handle<pat::PhotonCollection> photons;
   iEvent.getByLabel(mPhotonsIT, photons);
 
-  pat::PhotonCollection photonsRef;
+  pat::PhotonRefVector photonsRef;
 
   pat::PhotonCollection::const_iterator it = photons->begin();
   uint32_t index = 0;
@@ -530,7 +530,7 @@ bool GammaJetFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
 
     pat::PhotonRef photon(photons, index);
     if (fabs(it->eta()) <= 1.3 && isValidPhotonEB2012(photon, iEvent)) {
-      photonsRef.push_back(*it);
+      photonsRef.push_back(photon);
     }
   }
 
@@ -538,7 +538,7 @@ bool GammaJetFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
   if (photonsRef.size() != 1)
     return false;
 
-  const pat::Photon& photon = photonsRef[0];
+  const pat::PhotonRef& photon = photonsRef[0];
 
   // Process jets
 
@@ -679,7 +679,7 @@ bool GammaJetFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
   delete trigNames;
   delete trigResults;
 
-  photonToTree(photon);
+  photonToTree(photon, iEvent);
 
   // Electrons
   edm::Handle<pat::ElectronCollection> electrons;
@@ -786,7 +786,7 @@ void GammaJetFilter::extractRawJets(pat::JetCollection& jets) {
 
 }
 
-void GammaJetFilter::processJets(const pat::Photon& photon, pat::JetCollection& jets, const JetAlgorithm algo, edm::Handle<edm::ValueMap<float>>& qgTagMLP, edm::Handle<edm::ValueMap<float>>& qgTagLikelihood, const edm::Handle<pat::JetCollection>& handleForRef, std::vector<TTree*>& trees) {
+void GammaJetFilter::processJets(const pat::PhotonRef& photon, pat::JetCollection& jets, const JetAlgorithm algo, edm::Handle<edm::ValueMap<float>>& qgTagMLP, edm::Handle<edm::ValueMap<float>>& qgTagLikelihood, const edm::Handle<pat::JetCollection>& handleForRef, std::vector<TTree*>& trees) {
 
   pat::JetCollection selectedJets;
 
@@ -801,15 +801,15 @@ void GammaJetFilter::processJets(const pat::Photon& photon, pat::JetCollection& 
     goodJetIndex++;
 
     if (goodJetIndex == 0) {
-      mFirstJetPhotonDeltaPhi->Fill(fabs(reco::deltaPhi(photon, *it)));
-      mFirstJetPhotonDeltaR->Fill(reco::deltaR(photon, *it));
-      mFirstJetPhotonDeltaPt->Fill(fabs(photon.pt() - it->pt()));
+      mFirstJetPhotonDeltaPhi->Fill(fabs(reco::deltaPhi(*photon, *it)));
+      mFirstJetPhotonDeltaR->Fill(reco::deltaR(*photon, *it));
+      mFirstJetPhotonDeltaPt->Fill(fabs(photon->pt() - it->pt()));
 
-      mFirstJetPhotonDeltaPhiDeltaR->Fill(fabs(reco::deltaPhi(photon, *it)), reco::deltaR(photon, *it));
+      mFirstJetPhotonDeltaPhiDeltaR->Fill(fabs(reco::deltaPhi(*photon, *it)), reco::deltaR(*photon, *it));
     } else if (goodJetIndex == 1) {
-      mSecondJetPhotonDeltaPhi->Fill(fabs(reco::deltaPhi(photon, *it)));
-      mSecondJetPhotonDeltaR->Fill(reco::deltaR(photon, *it));
-      mSecondJetPhotonDeltaPt->Fill(fabs(photon.pt() - it->pt()));
+      mSecondJetPhotonDeltaPhi->Fill(fabs(reco::deltaPhi(*photon, *it)));
+      mSecondJetPhotonDeltaR->Fill(reco::deltaR(*photon, *it));
+      mSecondJetPhotonDeltaPt->Fill(fabs(photon->pt() - it->pt()));
     }
 
     // Extract Quark Gluon tagger value
@@ -828,11 +828,11 @@ void GammaJetFilter::processJets(const pat::Photon& photon, pat::JetCollection& 
         break;
       }
 
-      const double deltaPhi = reco::deltaPhi(photon, *it);
+      const double deltaPhi = reco::deltaPhi(*photon, *it);
       if (fabs(deltaPhi) < M_PI / 2.)
         continue; // Only back 2 back event are interesting
 
-      const double deltaR = reco::deltaR(photon, *it);
+      const double deltaR = reco::deltaR(*photon, *it);
       if (deltaR < deltaR_threshold) // This jet is inside the photon. This is probably the photon mis-reconstructed as a jet
         continue;
 
@@ -840,7 +840,7 @@ void GammaJetFilter::processJets(const pat::Photon& photon, pat::JetCollection& 
       // Events are supposed to be balanced between Jet and Gamma
       // If the leading jet has less than 30% of the Photon pt,
       // dump the event as it's not interesting
-      if (mFirstJetPtCut && (it->pt() < photon.pt() * mFirstJetThreshold))
+      if (mFirstJetPtCut && (it->pt() < photon->pt() * mFirstJetThreshold))
         break;
 
       mSelectedFirstJetIndex->Fill(goodJetIndex);
@@ -849,7 +849,7 @@ void GammaJetFilter::processJets(const pat::Photon& photon, pat::JetCollection& 
     } else {
 
       // Second jet selection
-      const double deltaR = reco::deltaR(photon, *it);
+      const double deltaR = reco::deltaR(*photon, *it);
 
       if (deltaR > deltaR_threshold) {
         mSelectedSecondJetIndex->Fill(goodJetIndex);
@@ -869,14 +869,14 @@ void GammaJetFilter::processJets(const pat::Photon& photon, pat::JetCollection& 
   if (selectedJets.size() > 0) {
 
     firstJet = &selectedJets[0];
-    mSelectedFirstJetPhotonDeltaPhi->Fill(fabs(reco::deltaPhi(photon, *firstJet)));
-    mSelectedFirstJetPhotonDeltaR->Fill(reco::deltaR(photon, *firstJet));
+    mSelectedFirstJetPhotonDeltaPhi->Fill(fabs(reco::deltaPhi(*photon, *firstJet)));
+    mSelectedFirstJetPhotonDeltaR->Fill(reco::deltaR(*photon, *firstJet));
 
     if (selectedJets.size() > 1) {
       secondJet = &selectedJets[1];
 
-      mSelectedSecondJetPhotonDeltaPhi->Fill(fabs(reco::deltaPhi(photon, *secondJet)));
-      mSelectedSecondJetPhotonDeltaR->Fill(reco::deltaR(photon, *secondJet));
+      mSelectedSecondJetPhotonDeltaPhi->Fill(fabs(reco::deltaPhi(*photon, *secondJet)));
+      mSelectedSecondJetPhotonDeltaR->Fill(reco::deltaR(*photon, *secondJet));
     }
   }
 
@@ -1249,13 +1249,54 @@ void GammaJetFilter::particleToTree(const reco::Candidate* particle, TTree* t, s
   updateBranch(t, addresses[8].get(), "e");
 }
 
-void GammaJetFilter::photonToTree(const pat::Photon& photon) {
+void GammaJetFilter::photonToTree(const pat::PhotonRef& photon, const edm::Event& event) {
   std::vector<boost::shared_ptr<void> > addresses;
 
-  particleToTree(&photon, mPhotonTree, addresses);
+  particleToTree(&(*photon), mPhotonTree, addresses);
+  
+  bool hasPixelSeed = photon->hasPixelSeed();
+  updateBranch(mPhotonTree, &hasPixelSeed, "has_pixel_seed", "O");
+
+  // Photon ID related
+  float hadTowOverEm = photon->hadTowOverEm();
+  updateBranch(mPhotonTree, &hadTowOverEm, "hadTowOverEm");
+
+  float sigmaIetaIeta = photon->sigmaIetaIeta();
+  updateBranch(mPhotonTree, &sigmaIetaIeta, "sigmaIetaIeta");
+
+  edm::Handle<double> rhos;
+  event.getByLabel(edm::InputTag("kt6PFJets", "rho", "RECO"), rhos);
+  float rho = *rhos;
+  updateBranch(mPhotonTree, &rho, "rho");
+
+  // Isolations are produced at PAT level by the PḧotonPFIsolation producer
+  edm::Handle<edm::ValueMap<bool>> hasMatchedPromptElectronHandle;
+  event.getByLabel(edm::InputTag("photonPFIsolation", "hasMatchedPromptElectron", "PAT"), hasMatchedPromptElectronHandle);
+
+  bool hasMatchedPromptElectron = (*hasMatchedPromptElectronHandle)[photon];
+  updateBranch(mPhotonTree, &hasMatchedPromptElectron, "hasMatchedPromptElectron", "O");
+
+  // Now, isolations
+  edm::Handle<edm::ValueMap<double>> chargedHadronsIsolationHandle;
+  event.getByLabel(edm::InputTag("photonPFIsolation", "chargedHadronsIsolation", "PAT"), chargedHadronsIsolationHandle);
+
+  edm::Handle<edm::ValueMap<double>> neutralHadronsIsolationHandle;
+  event.getByLabel(edm::InputTag("photonPFIsolation", "neutralHadronsIsolation", "PAT"), neutralHadronsIsolationHandle);
+
+  edm::Handle<edm::ValueMap<double>> photonIsolationHandle;
+  event.getByLabel(edm::InputTag("photonPFIsolation", "photonIsolation", "PAT"), photonIsolationHandle);
+
+  float chargedHadronsIsolation = getCorrectedPFIsolation((*chargedHadronsIsolationHandle)[photon], rho, photon->eta(), IsolationType::CHARGED_HADRONS);
+  float neutralHadronsIsolation = getCorrectedPFIsolation((*neutralHadronsIsolationHandle)[photon], rho, photon->eta(), IsolationType::NEUTRAL_HADRONS);
+  float photonIsolation = getCorrectedPFIsolation((*photonIsolationHandle)[photon], rho, photon->eta(), IsolationType::PHOTONS);
+
+  updateBranch(mPhotonTree, &chargedHadronsIsolation, "chargedHadronsIsolation");
+  updateBranch(mPhotonTree, &neutralHadronsIsolation, "neutralHadronsIsolation");
+  updateBranch(mPhotonTree, &photonIsolation, "photonIsolation");
+
   mPhotonTree->Fill();
 
-  particleToTree(photon.genPhoton(), mPhotonGenTree, addresses);
+  particleToTree(photon->genPhoton(), mPhotonGenTree, addresses);
   mPhotonGenTree->Fill();
 }
 

@@ -54,7 +54,7 @@
 bool EXIT = false;
 
 GammaJetFinalizer::GammaJetFinalizer():
-  mTriggers("triggers.xml") {
+  mRandomGenerator(0) {
   mPUWeight = 1.;
 
   mDoMCComparison = false;
@@ -91,19 +91,37 @@ void GammaJetFinalizer::cloneTree(TTree* from, TTree*& to) {
 }
 
 void GammaJetFinalizer::runAnalysis() {
+  
+  if (mIsMC) {
+    mMCTriggers = new MCTriggers("triggers_mc.xml");
+  } else {
+    mTriggers = new Triggers("triggers.xml");
+  }
 
   // Initialization
   mExtrapBinning.initialize(mPtBinning, (mJetType == PF) ? "PFlow" : "Calo");
   mNewExtrapBinning.initialize(mAlphaCut);
 
-  std::cout << "Parsing triggers.xml ..." << std::endl;
-  if (! mTriggers.parse()) {
-    std::cerr << "Failed to parse triggers.xml..." << std::endl;
-    return;
+  if (mIsMC) {
+    std::cout << "Parsing triggers_mc.xml ..." << std::endl;
+    if (! mMCTriggers->parse()) {
+      std::cerr << "Failed to parse triggers_mc.xml..." << std::endl;
+      return;
+    }
+    std::cout << "done." << std::endl;
+  } else {
+    std::cout << "Parsing triggers.xml ..." << std::endl;
+    if (! mTriggers->parse()) {
+      std::cerr << "Failed to parse triggers.xml..." << std::endl;
+      return;
+    }
+    std::cout << "done." << std::endl;
   }
-  std::cout << "done." << std::endl;
   std::cout << "triggers mapping:" << std::endl;
-  mTriggers.print();
+  if (mIsMC)
+    mMCTriggers->print();
+  else
+   mTriggers->print();
 
   std::cout << "Opening files ..." << std::endl;
 
@@ -302,6 +320,17 @@ void GammaJetFinalizer::runAnalysis() {
   TH1F* h_deltaPhi = analysisDir.make<TH1F>("deltaPhi", "deltaPhi", 60, M_PI / 2, M_PI);
   TH1F* h_deltaPhi_2ndJet = analysisDir.make<TH1F>("deltaPhi_2ndjet", "deltaPhi of 2nd jet", 60, M_PI / 2., M_PI);
   TH1F* h_ptPhoton = analysisDir.make<TH1F>("ptPhoton", "ptPhoton", 200, 5., 1000.);
+  TH1F* h_ptFirstJet = analysisDir.make<TH1F>("ptFirstJet", "ptFirstJet", 200, 5., 1000.);
+  TH1F* h_ptSecondJet = analysisDir.make<TH1F>("ptSecondJet", "ptSecondJet", 60, 0., 100.);
+  TH1F* h_MET = analysisDir.make<TH1F>("MET", "MET", 150, 0., 300.);
+  TH1F* h_alpha = analysisDir.make<TH1F>("alpha", "alpha", 100, 0., 2.);
+
+  TH1F* h_rho = analysisDir.make<TH1F>("rho", "rho", 100, 0, 50);
+  TH1F* h_hadTowOverEm = analysisDir.make<TH1F>("hadTowOverEm", "hadTowOverEm", 100, 0, 0.05);
+  TH1F* h_sigmaIetaIeta = analysisDir.make<TH1F>("sigmaIetaIeta", "sigmaIetaIeta", 100, 0, 0.011);
+  TH1F* h_chargedHadronsIsolation = analysisDir.make<TH1F>("chargedHadronsIsolation", "chargedHadronsIsolation", 100, 0, 0.7);
+  TH1F* h_neutralHadronsIsolation = analysisDir.make<TH1F>("neutralHadronsIsolation", "neutralHadronsIsolation", 100, 0, 100);
+  TH1F* h_photonIsolation = analysisDir.make<TH1F>("photonIsolation", "photonIsolation", 100, 0, 15);
 
   TH1F* h_deltaPhi_passedID = analysisDir.make<TH1F>("deltaPhi_passedID", "deltaPhi", 40, M_PI / 2, M_PI);
   TH1F* h_ptPhoton_passedID = analysisDir.make<TH1F>("ptPhoton_passedID", "ptPhoton", 200, 5., 1000.);
@@ -309,6 +338,14 @@ void GammaJetFinalizer::runAnalysis() {
   TH1F* h_ptSecondJet_passedID = analysisDir.make<TH1F>("ptSecondJet_passedID", "ptSecondJet", 60, 0., 100.);
   TH1F* h_MET_passedID = analysisDir.make<TH1F>("MET_passedID", "MET", 150, 0., 300.);
   TH1F* h_rawMET_passedID = analysisDir.make<TH1F>("rawMET_passedID", "raw MET", 150, 0., 300.);
+  TH1F* h_alpha_passedID = analysisDir.make<TH1F>("alpha_passedID", "alpha", 100, 0., 2.);
+
+  TH1F* h_rho_passedID = analysisDir.make<TH1F>("rho_passedID", "rho", 100, 0, 50);
+  TH1F* h_hadTowOverEm_passedID = analysisDir.make<TH1F>("hadTowOverEm_passedID", "hadTowOverEm", 100, 0, 0.05);
+  TH1F* h_sigmaIetaIeta_passedID = analysisDir.make<TH1F>("sigmaIetaIeta_passedID", "sigmaIetaIeta", 100, 0, 0.011);
+  TH1F* h_chargedHadronsIsolation_passedID = analysisDir.make<TH1F>("chargedHadronsIsolation_passedID", "chargedHadronsIsolation", 100, 0, 0.7);
+  TH1F* h_neutralHadronsIsolation_passedID = analysisDir.make<TH1F>("neutralHadronsIsolation_passedID", "neutralHadronsIsolation", 100, 0, 100);
+  TH1F* h_photonIsolation_passedID = analysisDir.make<TH1F>("photonIsolation_passedID", "photonIsolation", 100, 0, 15);
 
   TH2D* h_METvsfirstJet = analysisDir.make<TH2D>("METvsfirstJet", "MET vs firstJet", 150, 0., 300., 150, 0., 500.);
   TH2D* h_firstJetvsSecondJet = analysisDir.make<TH2D>("firstJetvsSecondJet", "firstJet vs secondJet", 60, 5., 100., 60, 5., 100.);
@@ -446,6 +483,9 @@ void GammaJetFinalizer::runAnalysis() {
 
   uint64_t passedPhotonJetCut = 0;
   uint64_t passedDeltaPhiCut = 0;
+  uint64_t passedPixelSeedVetoCut = 0;
+  uint64_t passedMuonsCut = 0;
+  uint64_t passedElectronsCut = 0;
   uint64_t passedAlphaCut = 0;
 
   uint64_t from = 0;
@@ -575,18 +615,18 @@ void GammaJetFinalizer::runAnalysis() {
     if (mIsMC) {
       passedTrigger = cleanTriggerName(passedTrigger);
       computePUWeight(passedTrigger);
-    } else {
       triggerWeight = 1.;
+    } else {
+      triggerWeight = 1. / triggerWeight;
     }
-
-    triggerWeight = 1.;
 
     double generatorWeight = (mIsMC) ? analysis.generator_weight : 1.;
     if (generatorWeight == 0.)
       generatorWeight = 1.;
     
-    double eventWeight = (mIsMC) ? mPUWeight * analysis.event_weight * generatorWeight : 1.;
+    double eventWeight = (mIsMC) ? mPUWeight * analysis.event_weight * generatorWeight : triggerWeight;
 #if ADD_TREES
+    double oldAnalysisWeight = analysis.event_weight;
     analysis.event_weight = eventWeight;
 #endif
 
@@ -624,11 +664,39 @@ void GammaJetFinalizer::runAnalysis() {
 
     passedDeltaPhiCut++;
 
+    // Pixel seed veto
+    if (photon.has_pixel_seed)
+      continue;
+
+    passedPixelSeedVetoCut++;
+
+    // No muons
+    if (muons.n != 0)
+      continue;
+
+    passedMuonsCut++;
+
+    // Electron veto. No electron close to the photon
+    bool keepEvent = true;
+    for (int j = 0; j < electrons.n; j++) {
+      double deltaR = fabs(reco::deltaR(photon.eta, photon.phi, electrons.eta[j], electrons.phi[j]));
+      if (deltaR < 0.13) {
+        keepEvent = false;
+        break;
+      }
+    }
+
+    if (! keepEvent)
+      continue;
+
+    passedElectronsCut++;
+
     /*
     if (firstJet.pt < 12)
       continue;
     */
 
+    //bool secondJetOK = !secondJet.is_present || (secondJet.pt < mAlphaCut * photon.pt);
     bool secondJetOK = !secondJet.is_present || (secondJet.pt < 10 || secondJet.pt < mAlphaCut * photon.pt);
 
     if (mDoMCComparison) {
@@ -640,13 +708,29 @@ void GammaJetFinalizer::runAnalysis() {
     if (secondJetOK)
       passedAlphaCut++;
 
+#if ADD_TREES
+    h_nvertex->Fill(analysis.nvertex, oldAnalysisWeight);
+#else
     h_nvertex->Fill(analysis.nvertex, analysis.event_weight);
+#endif
+
     h_nvertex_reweighted->Fill(analysis.nvertex, eventWeight);
 
     double deltaPhi_2ndJet = fabs(reco::deltaPhi(secondJet.phi, photon.phi));
     h_deltaPhi->Fill(deltaPhi, eventWeight);
     h_deltaPhi_2ndJet->Fill(deltaPhi_2ndJet, eventWeight); 
-    h_ptPhoton->Fill(photon.pt, eventWeight * triggerWeight);
+    h_ptPhoton->Fill(photon.pt, eventWeight);
+    h_ptFirstJet->Fill(firstJet.pt, eventWeight);
+    h_ptSecondJet->Fill(secondJet.pt, eventWeight);
+    h_MET->Fill(MET.pt, eventWeight);
+    h_alpha->Fill(secondJet.pt / photon.pt, eventWeight);
+
+    h_rho->Fill(photon.rho, eventWeight);
+    h_hadTowOverEm->Fill(photon.hadTowOverEm, eventWeight);
+    h_sigmaIetaIeta->Fill(photon.sigmaIetaIeta, eventWeight);
+    h_chargedHadronsIsolation->Fill(photon.chargedHadronsIsolation, eventWeight);
+    h_neutralHadronsIsolation->Fill(photon.neutralHadronsIsolation, eventWeight);
+    h_photonIsolation->Fill(photon.photonIsolation, eventWeight);
 
     // Dump to Tree
     /*photonToTree(photon);
@@ -806,14 +890,22 @@ void GammaJetFinalizer::runAnalysis() {
 
       do {
         h_deltaPhi_passedID->Fill(deltaPhi, eventWeight);
-        h_ptPhoton_passedID->Fill(photon.pt, eventWeight * triggerWeight);
+        h_ptPhoton_passedID->Fill(photon.pt, eventWeight);
         h_ptFirstJet_passedID->Fill(firstJet.pt, eventWeight);
         h_ptSecondJet_passedID->Fill(secondJet.pt, eventWeight);
         h_MET_passedID->Fill(MET.et, eventWeight);
         h_rawMET_passedID->Fill(rawMET.et, eventWeight);
+        h_alpha_passedID->Fill(secondJet.pt / photon.pt, eventWeight);
 
         h_METvsfirstJet->Fill(MET.et, firstJet.pt, eventWeight);
         h_firstJetvsSecondJet->Fill(firstJet.pt, secondJet.pt, eventWeight);
+
+        h_rho_passedID->Fill(photon.rho, eventWeight);
+        h_hadTowOverEm_passedID->Fill(photon.hadTowOverEm, eventWeight);
+        h_sigmaIetaIeta_passedID->Fill(photon.sigmaIetaIeta, eventWeight);
+        h_chargedHadronsIsolation_passedID->Fill(photon.chargedHadronsIsolation, eventWeight);
+        h_neutralHadronsIsolation_passedID->Fill(photon.neutralHadronsIsolation, eventWeight);
+        h_photonIsolation_passedID->Fill(photon.photonIsolation, eventWeight);
 
         // Special case
         if (fabs(firstJet.eta) < 1.3) {
@@ -901,10 +993,13 @@ void GammaJetFinalizer::runAnalysis() {
     }
   }
   std::cout << "Selection efficiency: " << MAKE_RED << (double) passedEvents / (to - from) * 100 << "%" << RESET_COLOR << std::endl;
-  std::cout << "Selection for photon/jet cut: " << MAKE_RED << (double) passedPhotonJetCut / (to - from) * 100 << "%" << RESET_COLOR << std::endl;
+  std::cout << "Efficiency for photon/jet cut: " << MAKE_RED << (double) passedPhotonJetCut / (to - from) * 100 << "%" << RESET_COLOR << std::endl;
   std::cout << "Selection efficiency for trigger selection: " << MAKE_RED << (double) passedEventsFromTriggers / (to - from) * 100 << "%" << RESET_COLOR << std::endl;
-  std::cout << "Selection for Δφ cut: " << MAKE_RED << (double) passedDeltaPhiCut / (to - from) * 100 << "%" << RESET_COLOR << std::endl;
-  std::cout << "Selection for α cut: " << MAKE_RED << (double) passedAlphaCut / (to - from) * 100 << "%" << RESET_COLOR << std::endl;
+  std::cout << "Efficiency for Δφ cut: " << MAKE_RED << (double) passedDeltaPhiCut / (to - from) * 100 << "%" << RESET_COLOR << std::endl;
+  std::cout << "Efficiency for pixel seed veto cut: " << MAKE_RED << (double) passedPixelSeedVetoCut / (to - from) * 100 << "%" << RESET_COLOR << std::endl;
+  std::cout << "Efficiency for muons cut: " << MAKE_RED << (double) passedMuonsCut / (to - from) * 100 << "%" << RESET_COLOR << std::endl;
+  std::cout << "Efficiency for electrons cut: " << MAKE_RED << (double) passedElectronsCut / (to - from) * 100 << "%" << RESET_COLOR << std::endl;
+  std::cout << "Efficiency for α cut: " << MAKE_RED << (double) passedAlphaCut / (to - from) * 100 << "%" << RESET_COLOR << std::endl;
 
   std::cout << std::endl;
   std::cout << "Rejected events because trigger was not found: " << MAKE_RED << (double) rejectedEventsTriggerNotFound / (rejectedEventsFromTriggers) * 100 << "%" << RESET_COLOR << std::endl;
@@ -1053,7 +1148,7 @@ std::vector<std::shared_ptr<GaussianProfile>> GammaJetFinalizer::buildNewExtrapo
 }
 
 std::string GammaJetFinalizer::cleanTriggerName(const std::string& trigger) {
-  static boost::regex r(R"(_\.\*)");
+  static boost::regex r(R"(_\.\*|\.\*)");
   return boost::regex_replace(trigger, r, "");
 }
 
@@ -1114,13 +1209,14 @@ void GammaJetFinalizer::checkInputFiles() {
 
 int GammaJetFinalizer::checkTrigger(std::string& passedTrigger, float& weight) {
 
-  const PathVector& mandatoryTriggers = mTriggers.getTriggers(analysis.run);
+  if (! mIsMC) {
+    const PathVector& mandatoryTriggers = mTriggers->getTriggers(analysis.run);
 
-  // Method 2:
-  // - With the photon p_t, find the trigger it should pass
-  // - Then, look on trigger list if it pass it or not (only for data)
+    // Method 2:
+    // - With the photon p_t, find the trigger it should pass
+    // - Then, look on trigger list if it pass it or not (only for data)
 
-  //if (! mIsMC) {
+    //if (! mIsMC) {
 
     const PathData* mandatoryTrigger = nullptr;
     for (auto& path: mandatoryTriggers) {
@@ -1134,11 +1230,6 @@ int GammaJetFinalizer::checkTrigger(std::string& passedTrigger, float& weight) {
 
     weight = mandatoryTrigger->second.weight;
 
-    if (mIsMC) {
-      passedTrigger = mandatoryTrigger->first.str();
-      return TRIGGER_OK;
-    }
-
     // This photon must pass mandatoryTrigger.first
     size_t size = analysis.trigger_names->size();
     for (int i = size - 1; i >= 0; i--) {
@@ -1151,6 +1242,43 @@ int GammaJetFinalizer::checkTrigger(std::string& passedTrigger, float& weight) {
         return TRIGGER_OK;
       }
     }
+  } else {
+    const std::map<Range<float>, std::vector<MCTrigger>>& triggers = mMCTriggers->getTriggers();
+
+    const std::vector<MCTrigger>* mandatoryTrigger = nullptr;
+    for (auto& path: triggers) {
+      if (path.first.in(photon.pt)) {
+        mandatoryTrigger = &path.second;
+      }
+    }
+
+    if (!mandatoryTrigger)
+      return TRIGGER_NOT_FOUND;
+
+    weight = 1;
+
+    if (mandatoryTrigger->size() > 1) {
+      double random = mRandomGenerator.Rndm();
+
+      double weight_low = 0;
+      double weight_high = 0;
+      for (int32_t i = 0; i < (int32_t) mandatoryTrigger->size(); i++) {
+        if (i - 1 >= 0)
+          weight_low += (*mandatoryTrigger)[i - 1].weight;
+        weight_high += (*mandatoryTrigger)[i].weight;
+
+        if (random > weight_low && random <= weight_high) {
+          passedTrigger = (*mandatoryTrigger)[i].name.str();
+          return TRIGGER_OK;
+        }
+      }
+
+      throw new std::exception(); // This should NEVER happened
+    }
+
+    passedTrigger = mandatoryTrigger->at(0).name.str();
+    return TRIGGER_OK;
+  }
 
   //} else {
 

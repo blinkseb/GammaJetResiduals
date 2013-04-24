@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<triggers>
+  <path>
+    <name weight="0.644752434">HLT_Photon30_CaloIdVL_.*</name>
+    <name weight="0.355247566">HLT_Photon30_CaloIdVL_IsoL.*</name>
+    <pt from="40" to="60" />
+  </path>
+  <path>
+    <name>HLT_Photon50_CaloIdVL_IsoL.*</name>
+    <pt from="60" to="100" />
+  </path>
+  <path>
+    <name weight="0.644752434">HLT_Photon90_CaloIdVL_.*</name>
+    <name weight="0.355247566">HLT_Photon90_CaloIdVL_IsoL.*</name>
+    <pt from="100" to="155" />
+  </path>
+  <path>
+    <name>HLT_Photon135_.*</name>
+    <pt from="155" to="180" />
+  </path>
+  <path>
+    <name>HLT_Photon150_.*</name>
+    <pt from="180" to="210" />
+  </path>
+  <path>
+    <name>HLT_Photon160_.*</name>
+    <pt from="210" to="8000" />
+  </path>
+</triggers>

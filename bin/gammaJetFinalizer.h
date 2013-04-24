@@ -1,5 +1,7 @@
 #pragma once
 
+#include <TRandom3.h>
+
 #include "Tree/GenParticlesTree.h"
 #include "Tree/AnalysisTree.h"
 #include "Tree/PhotonTree.h"
@@ -212,6 +214,8 @@ class GammaJetFinalizer
     float respGenGamma;
     float respPhotonGamma;
 
-    // Triggers data
-    Triggers mTriggers;
+    // Triggers on data
+    Triggers* mTriggers;
+    MCTriggers* mMCTriggers;
+    TRandom3 mRandomGenerator;
 };

@@ -116,3 +116,57 @@ void Triggers::print() {
     }
   }
 }
+
+//--------
+
+
+bool MCTriggers::parse() {
+  XMLDocument doc;
+  if (doc.LoadFile(mXmlFile.c_str())) {
+    doc.PrintError();
+    return false;
+  }
+
+  const XMLElement* root = doc.FirstChildElement("triggers");
+  if (! root)
+    return false;
+
+  const XMLElement* path = root->FirstChildElement("path");
+  for (; path; path = path->NextSiblingElement("path")) {
+    parsePathElement(path);
+  }
+
+  return true;
+}
+
+bool MCTriggers::parsePathElement(const XMLElement* path) {
+
+  // Parse pt
+  const XMLElement* pt = path->FirstChildElement("pt");
+  Range<float> ptRange(pt->FloatAttribute("from"), pt->FloatAttribute("to"));
+
+  // Parse names
+  const XMLElement* name = path->FirstChildElement("name");
+  for (; name; name = name->NextSiblingElement("name")) {
+    const std::string n = name->GetText();
+    double weight = 1.;
+    name->QueryDoubleAttribute("weight", &weight);
+
+    MCTrigger t {boost::regex(n, boost::regex_constants::icase), weight};
+    mTriggers[ptRange].push_back(t);
+  }
+
+  return true;
+}
+
+void MCTriggers::print() {
+  for (auto& trigger: mTriggers) {
+    const Range<float>& ptRange = trigger.first;
+    const auto& paths = trigger.second;
+
+    std::cout << "Pt range: " << ptRange << std::endl;
+    for (auto& path: paths) {
+      std::cout << path.name << " -> " << path.weight << std::endl;
+    }
+  }
+}

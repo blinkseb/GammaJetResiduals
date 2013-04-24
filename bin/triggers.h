@@ -81,3 +81,28 @@ class Triggers {
 
     bool parseRunsElement(const tinyxml2::XMLElement* runs);
 };
+
+struct MCTrigger {
+  boost::regex name;
+  double weight;
+};
+
+class MCTriggers {
+  public:
+    MCTriggers(const std::string& xmlFile):
+      mXmlFile(xmlFile) {}
+
+    bool parse();
+    void print();
+
+    //const boost::regex& getHLTPath(unsigned int run, float pt);
+    const std::map<Range<float>, std::vector<MCTrigger>>& getTriggers() {
+      return mTriggers;
+    }
+
+  private:
+    std::string mXmlFile;
+    std::map<Range<float>, std::vector<MCTrigger>> mTriggers;
+
+    bool parsePathElement(const tinyxml2::XMLElement* path);
+};
