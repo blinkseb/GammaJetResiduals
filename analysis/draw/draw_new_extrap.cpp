@@ -9,6 +9,9 @@
 #include <TMultiGraph.h>
 #include <TLatex.h>
 
+#include <TVirtualFitter.h>
+#include <TColor.h>
+
 #include <sys/stat.h>
 
 #include "etaBinning.h"
@@ -19,6 +22,11 @@
 bool useMCassoc_ = false;
 bool ONEVTX = false;
 bool OUTPUT_GRAPHS = true;
+
+#define LIGHT_RED TColor::GetColor(0xcf, 0xa0, 0xa1)
+#define LIGHT_BLUE TColor::GetColor(0xb2, 0xb2, 0xcf)
+#define LIGHT_GRAY TColor::GetColor(0xcd, 0xcd, 0xcd)
+#define LIGHT_MARRON TColor::GetColor(0xcf, 0xb9, 0xba)
 
 void drawGraphs(TGraphErrors* data, TGraphErrors* mc, const std::string& method, const std::string& xTitle, const std::string& yTitle, const std::string& legendTitle, double lumi, const std::string& outputName, int dataMarkerStyle = 20, int dataMarkerColor = kBlack, int mcMarkerStyle = 29, int mcMarkerColor = kBlue) {
 
@@ -35,6 +43,16 @@ void drawGraphs(TGraphErrors* data, TGraphErrors* mc, const std::string& method,
   // Fit
   TF1* data_fct = nullptr;
   TF1* mc_fct = nullptr;
+
+  TH1D* errors_data = new TH1D("errors_data", "errors", 100, 0, 1);
+  errors_data->SetStats(false);
+  errors_data->SetFillColor(LIGHT_GRAY);
+  //errors_data->SetLineColor(kRed);
+  errors_data->SetFillStyle(1001);
+
+  TH1D* errors_mc = (TH1D*) errors_data->Clone("errors_mc");
+  errors_mc->SetFillColor(LIGHT_BLUE);
+
   if (method == "Balancing") {
     data_fct = new TF1("data_fct", "[0] - x*x*[1]", 0, 1);
     data_fct->SetLineColor(dataMarkerColor);
@@ -42,6 +60,7 @@ void drawGraphs(TGraphErrors* data, TGraphErrors* mc, const std::string& method,
     data_fct->SetLineStyle(2);
 
     data->Fit(data_fct, "RQN");
+    (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_data);
 
     mc_fct = new TF1("mc_fct", "[0] - x*x*[1]", 0, 1);
     mc_fct->SetLineColor(mcMarkerColor);
@@ -49,6 +68,7 @@ void drawGraphs(TGraphErrors* data, TGraphErrors* mc, const std::string& method,
     mc_fct->SetLineStyle(2);
 
     mc->Fit(mc_fct, "RQN");
+    (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_mc);
   } else {
     data_fct = new TF1("data_fct", "[0] + x*[1]", 0, 1);
     data_fct->SetLineColor(dataMarkerColor);
@@ -56,6 +76,7 @@ void drawGraphs(TGraphErrors* data, TGraphErrors* mc, const std::string& method,
     data_fct->SetLineStyle(2);
 
     data->Fit(data_fct, "RQN");
+    (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_data);
 
     mc_fct = new TF1("mc_fct", "[0] + x*[1]", 0, 1);
     mc_fct->SetLineColor(mcMarkerColor);
@@ -63,6 +84,7 @@ void drawGraphs(TGraphErrors* data, TGraphErrors* mc, const std::string& method,
     mc_fct->SetLineStyle(2);
 
     mc->Fit(mc_fct, "RQN");
+    (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_mc);
 
   }
 
@@ -80,8 +102,13 @@ void drawGraphs(TGraphErrors* data, TGraphErrors* mc, const std::string& method,
 
   mg->Draw("ap");
 
+  errors_data->Draw("e3 same");
+  errors_mc->Draw("e3 same");
+
   data_fct->Draw("same");
   mc_fct->Draw("same");
+
+  mg->Draw("ap same");
 
 
   TLegend* legend = new TLegend(0.18, 0.18, 0.55, 0.35);
@@ -114,6 +141,9 @@ void drawGraphs(TGraphErrors* data, TGraphErrors* mc, const std::string& method,
 
   delete canvas;
   delete mg;
+
+  delete errors_data;
+  delete errors_mc;
 }
 
 void drawCombinedGraphs(TGraphErrors* balancingData, TGraphErrors* balancingMC, TGraphErrors* mpfData, TGraphErrors* mpfMC, const std::string& xTitle, const std::string& yTitle, const std::string& legendTitle, double lumi, const std::string& outputName) {
@@ -137,6 +167,22 @@ void drawCombinedGraphs(TGraphErrors* balancingData, TGraphErrors* balancingMC, 
   mpfMC->SetMarkerStyle(29);
   mpfMC->SetMarkerColor(46);
   mpfMC->SetLineColor(46);
+  
+  TH1D* errors_bal_data = new TH1D("errors_bal_data", "errors", 100, 0, 1);
+  errors_bal_data->SetStats(false);
+  errors_bal_data->SetFillColor(LIGHT_GRAY);
+  errors_bal_data->SetFillStyle(1001);
+
+  TH1D* errors_bal_mc = (TH1D*) errors_bal_data->Clone("errors_bal_mc");
+  errors_bal_mc->SetFillColor(LIGHT_BLUE);
+
+  TH1D* errors_mpf_data = new TH1D("errors_mpf_data", "errors", 100, 0, 1);
+  errors_mpf_data->SetStats(false);
+  errors_mpf_data->SetFillColor(LIGHT_RED);
+  errors_mpf_data->SetFillStyle(1001);
+
+  TH1D* errors_mpf_mc = (TH1D*) errors_bal_data->Clone("errors_mpf_mc");
+  errors_mpf_mc->SetFillColor(LIGHT_MARRON);
 
   TF1* balancingData_fct = new TF1("balancingData_fct", "[0] - x*x*[1]", 0, 1);
   balancingData_fct->SetLineColor(kBlack);
@@ -144,6 +190,7 @@ void drawCombinedGraphs(TGraphErrors* balancingData, TGraphErrors* balancingMC, 
   balancingData_fct->SetLineStyle(2);
 
   balancingData->Fit(balancingData_fct, "QRN");
+  (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_bal_data);
 
   TF1* balancingMC_fct = new TF1("mc_fct", "[0] - x*x*[1]", 0, 1);
   balancingMC_fct->SetLineColor(kBlue);
@@ -151,6 +198,7 @@ void drawCombinedGraphs(TGraphErrors* balancingData, TGraphErrors* balancingMC, 
   balancingMC_fct->SetLineStyle(2);
 
   balancingMC->Fit(balancingMC_fct, "QRN");
+  (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_bal_mc);
 
   TF1* mpfData_fct = new TF1("mpfData_fct", "[0] + x*[1]", 0, 1);
   mpfData_fct->SetLineColor(kRed);
@@ -158,6 +206,7 @@ void drawCombinedGraphs(TGraphErrors* balancingData, TGraphErrors* balancingMC, 
   mpfData_fct->SetLineStyle(2);
 
   mpfData->Fit(mpfData_fct, "QRN");
+  (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_mpf_data);
 
   TF1* mpfMC_fct = new TF1("mc_fct", "[0] + x*[1]", 0, 1);
   mpfMC_fct->SetLineColor(46);
@@ -165,6 +214,7 @@ void drawCombinedGraphs(TGraphErrors* balancingData, TGraphErrors* balancingMC, 
   mpfMC_fct->SetLineStyle(2);
 
   mpfMC->Fit(mpfMC_fct, "QRN");
+  (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_mpf_mc);
 
   TMultiGraph* mg = new TMultiGraph();
   mg->Add(balancingData);
@@ -183,6 +233,14 @@ void drawCombinedGraphs(TGraphErrors* balancingData, TGraphErrors* balancingMC, 
   balancingMC_fct->SetRange(0, 1);
   mpfData_fct->SetRange(0, 1);
   mpfMC_fct->SetRange(0, 1);
+
+  errors_bal_data->Draw("e3 same");
+  errors_bal_mc->Draw("e3 same");
+
+  errors_mpf_data->Draw("e3 same");
+  errors_mpf_mc->Draw("e3 same");
+
+  mg->Draw("ap same");
 
   balancingData_fct->Draw("same");
   balancingMC_fct->Draw("same");
@@ -222,7 +280,21 @@ void drawCombinedGraphs(TGraphErrors* balancingData, TGraphErrors* balancingMC, 
   delete legend;
   delete canvas;
 
+  delete errors_bal_data;
+  delete errors_bal_mc;
+
+  delete errors_mpf_data;
+  delete errors_mpf_mc;
+
   // Do now data / MC plots
+
+  TH1D* errors_bal = new TH1D("errors_bal", "errors", 100, 0, 1);
+  errors_bal->SetStats(false);
+  errors_bal->SetFillColor(LIGHT_BLUE);
+  errors_bal->SetFillStyle(1001);
+
+  TH1D* errors_mpf = (TH1D*) errors_bal->Clone("errors_mpf");
+  errors_mpf->SetFillColor(LIGHT_RED);
 
   TGraphErrors* balancing_ratio = fitTools::get_graphRatio(balancingData, balancingMC);
   balancing_ratio->SetMarkerSize(1.5);
@@ -242,6 +314,7 @@ void drawCombinedGraphs(TGraphErrors* balancingData, TGraphErrors* balancingMC, 
   balancingRatio_fct->SetLineStyle(2);
 
   balancing_ratio->Fit(balancingRatio_fct, "QRN");
+  (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_bal);
   TString balancing_ratio_legend = TString::Format("#color[4]{#splitline{#scale[1.2]{r = %.03f #pm %.03f}}{#scale[0.8]{#chi^{2} / NDF: %.02f / %d}}}", balancingRatio_fct->GetParameter(0), balancingRatio_fct->GetParError(0), balancingRatio_fct->GetChisquare(), balancingRatio_fct->GetNDF());
 
   TF1* mpfRatio_fct = new TF1("mpfRatio_fct", "[0] + x*[1]", 0, 1);
@@ -250,6 +323,7 @@ void drawCombinedGraphs(TGraphErrors* balancingData, TGraphErrors* balancingMC, 
   mpfRatio_fct->SetLineStyle(2);
 
   mpf_ratio->Fit(mpfRatio_fct, "QRN");
+  (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_mpf);
   TString mpf_ratio_legend = TString::Format("#color[2]{#splitline{#scale[1.2]{r = %.03f #pm %.03f}}{#scale[0.8]{#chi^{2} / NDF: %.02f / %d}}}", mpfRatio_fct->GetParameter(0), mpfRatio_fct->GetParError(0), mpfRatio_fct->GetChisquare(), mpfRatio_fct->GetNDF());
 
   TMultiGraph* mg2 = new TMultiGraph();
@@ -265,6 +339,11 @@ void drawCombinedGraphs(TGraphErrors* balancingData, TGraphErrors* balancingMC, 
 
   balancingRatio_fct->SetRange(0, 1);
   mpfRatio_fct->SetRange(0, 1);
+
+  errors_bal->Draw("e3 same");
+  errors_mpf->Draw("e3 same");
+
+  mg2->Draw("ap same");
 
   balancingRatio_fct->Draw("same");
   mpfRatio_fct->Draw("same");
@@ -299,6 +378,9 @@ void drawCombinedGraphs(TGraphErrors* balancingData, TGraphErrors* balancingMC, 
   
   delete mg;
   delete mg2;
+
+  delete errors_bal;
+  delete errors_mpf;
 }
 
 int main(int argc, char* argv[]) {

@@ -136,9 +136,16 @@ int main(int argc, char* argv[]) {
 
   // Data / MC comparison
   db->drawHisto("ptPhoton", "Photon Transverse Momentum", "GeV", "Events", log, 1, "", false, 200);
+  db->drawHisto("ptFirstJet", "Jet Transverse Momentum", "GeV", "Events", log);
+  db->drawHisto("ptSecondJet", "2nd Jet Transverse Momentum", "GeV", "Events", log);
+  db->drawHisto("MET", "Missing E_{T}", "GeV", "Events", log);
+  db->drawHisto("alpha", "#alpha", "", "Events", log);
+
   db->drawHisto("ptPhoton_passedID", "Photon Transverse Momentum", "GeV", "Events", log, 1, "", false, 200);
   db->drawHisto("ptFirstJet_passedID", "Jet Transverse Momentum", "GeV", "Events", log);
   db->drawHisto("ptSecondJet_passedID", "2nd Jet Transverse Momentum", "GeV", "Events", log);
+  db->drawHisto("MET_passedID", "Missing E_{T}", "GeV", "Events", log);
+  db->drawHisto("alpha_passedID", "#alpha", "", "Events", log);
 
   //db->drawHisto("etaPhot", "#eta", "", "", log);
 
@@ -149,8 +156,22 @@ int main(int argc, char* argv[]) {
   db->set_rebin(2);
   db->drawHisto("deltaPhi_passedID", "#Delta #varphi", "", "Events", log);
 
+  db->drawHisto("hadTowOverEm", "", "", "Events", log);
+  db->drawHisto("sigmaIetaIeta", "", "", "Events", log);
+  db->drawHisto("rho", "#rho", "", "Events", log);
+  db->drawHisto("chargedHadronsIsolation", "Charged hadrons isolation", "", "Events", log);
+  db->drawHisto("neutralHadronsIsolation", "Neutral hadrons isolation", "", "Events", log);
+  db->drawHisto("photonIsolation", "Photon isolation", "", "Events", log);
+
+  db->drawHisto("hadTowOverEm_passedID", "", "", "Events", log);
+  db->drawHisto("sigmaIetaIeta_passedID", "", "", "Events", log);
+  db->drawHisto("rho_passedID", "#rho", "", "Events", log);
+  db->drawHisto("chargedHadronsIsolation_passedID", "Charged hadrons isolation", "", "Events", log);
+  db->drawHisto("neutralHadronsIsolation_passedID", "Neutral hadrons isolation", "", "Events", log);
+  db->drawHisto("photonIsolation_passedID", "Photon isolation", "", "Events", log);
+
+
   db->set_rebin(5);
-  db->drawHisto("MET_passedID", "Missing E_{T}", "GeV", "Events", log);
 
   db->setOutputGraphs(OUTPUT_GRAPHS);
 

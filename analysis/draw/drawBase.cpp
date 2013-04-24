@@ -353,7 +353,7 @@ void drawBase::drawHisto_vs_pt(std::vector<std::pair<float, float> > ptBins, con
 
     // pt phot cut label
     TString labelPtPhot = TString::Format("%d < p_{T}^{#gamma} < %d GeV/c", (int) currentBin.first, (int) currentBin.second);
-    drawHisto(std::string(name + "_" + ptRange), axisName, units, instanceName, log_aussi, legendQuadrant, labelPtPhot.Data(), true);
+    drawHisto(std::string(name + "_" + ptRange), axisName, units, instanceName, log_aussi, legendQuadrant, labelPtPhot.Data(), true, false);
 
     scaleFactor_ = oldScaleFactor;
 
@@ -934,7 +934,7 @@ void drawBase::drawHisto_vs_pt(std::vector<std::pair<float, float> > ptBins, con
 
 }
 
-void drawBase::drawHisto(const std::string& name, const std::string& axisName, const std::string& units, const std::string& instanceName, bool log_aussi, int legendQuadrant, const std::string& labelText, bool add_jetAlgoText, double fitMin, double fitMax) {
+void drawBase::drawHisto(const std::string& name, const std::string& axisName, const std::string& units, const std::string& instanceName, bool log_aussi, int legendQuadrant, const std::string& labelText, bool add_jetAlgoText, bool drawRatio, double fitMin, double fitMax) {
 
   std::vector<TH1*> dataHistos;
   for (unsigned int iData = 0; iData < dataFiles_.size(); iData++) {
@@ -962,7 +962,7 @@ void drawBase::drawHisto(const std::string& name, const std::string& axisName, c
     mcHistos_superimp.push_back(mcHisto0_superimp);
   }
 
-  drawHisto_fromHistos(dataHistos, mcHistos, mcHistos_superimp, name, axisName, units, instanceName, log_aussi, legendQuadrant, "", labelText, add_jetAlgoText, fitMin, fitMax);
+  drawHisto_fromHistos(dataHistos, mcHistos, mcHistos_superimp, name, axisName, units, instanceName, log_aussi, legendQuadrant, "", labelText, add_jetAlgoText, drawRatio, fitMin, fitMax);
 
 
 } //drawhisto
@@ -1072,7 +1072,7 @@ void drawBase::drawHisto_fromTree(const std::string& treeName, const std::string
 
 
 
-void drawBase::drawHisto_fromHistos(std::vector<TH1*> dataHistos, std::vector<TH1*> mcHistos, std::vector<TH1*> mcHistos_superimp, const std::string& name, const std::string& axisName, const std::string& units, const std::string& instanceName, bool log_aussi, int legendQuadrant, const std::string& flags, const std::string& labelText, bool add_jetAlgoText, double fitMin/* = 0*/, double fitMax/* = 8000*/) {
+void drawBase::drawHisto_fromHistos(std::vector<TH1*> dataHistos, std::vector<TH1*> mcHistos, std::vector<TH1*> mcHistos_superimp, const std::string& name, const std::string& axisName, const std::string& units, const std::string& instanceName, bool log_aussi, int legendQuadrant, const std::string& flags, const std::string& labelText, bool add_jetAlgoText, bool drawRatio/* = true*/, double fitMin/* = 0*/, double fitMax/* = 8000*/) {
 
   bool noDATA = false;
   bool noMC = false;
@@ -1436,10 +1436,13 @@ void drawBase::drawHisto_fromHistos(std::vector<TH1*> dataHistos, std::vector<TH
   if (!noBinLabels) {
     h2_axes->GetXaxis()->SetLabelSize(0.07);
   }
-  h2_axes->GetXaxis()->SetTitleOffset(1.1);
-  h2_axes->GetYaxis()->SetTitleOffset(1.2);
-  h2_axes->GetYaxis()->SetTitleSize(0.045);
-  h2_axes->GetXaxis()->SetLabelSize(0.);
+
+  if (drawRatio) {
+    h2_axes->GetXaxis()->SetTitleOffset(1.1);
+    h2_axes->GetYaxis()->SetTitleOffset(1.2);
+    h2_axes->GetYaxis()->SetTitleSize(0.045);
+    h2_axes->GetXaxis()->SetLabelSize(0.);
+  }
 
   TPaveText* label_cms = get_labelCMS(0);
   TPaveText* label_sqrt = get_labelSqrt(0);
@@ -1457,28 +1460,36 @@ void drawBase::drawHisto_fromHistos(std::vector<TH1*> dataHistos, std::vector<TH
   }
   label_bonus->AddText(labelText.c_str());
 
-  int canvasHeight = (noMC) ? 600 : 800;
-  TCanvas* c1 = new TCanvas("c1", "c1", 600, canvasHeight);
+  TCanvas* c1 = new TCanvas("c1", "c1", (drawRatio) ? 600 : 800, 800);
   c1->cd();
 
   // Data / MC comparison
-  TPad* pad_hi = new TPad("pad_hi", "", 0., 0.33, 0.99, 0.99);
-  pad_hi->Draw();
-  //pad_hi->SetLogx();
-  pad_hi->SetLeftMargin(0.12);
-  pad_hi->SetBottomMargin(0.015);
+  TVirtualPad* pad_hi = NULL; 
+  TPad* pad_lo = NULL;
+  
+  if (drawRatio) {
+    pad_hi = new TPad("pad_hi", "", 0., 0.33, 0.99, 0.99);
+    pad_hi->Draw();
+    //pad_hi->SetLogx();
+    pad_hi->SetLeftMargin(0.12);
+    pad_hi->SetBottomMargin(0.015);
 
-  // Data / MC ratio
-  TPad* pad_lo = new TPad("pad_lo", "", 0., 0., 0.99, 0.33);
-  pad_lo->Draw();
-  //pad_lo->SetLogx();
-  pad_lo->SetLeftMargin(0.12);
-  pad_lo->SetTopMargin(1.);
-  pad_lo->SetBottomMargin(0.3);
+    // Data / MC ratio
+    pad_lo = new TPad("pad_lo", "", 0., 0., 0.99, 0.33);
+    pad_lo->Draw();
+    //pad_lo->SetLogx();
+    pad_lo->SetLeftMargin(0.12);
+    pad_lo->SetTopMargin(1.);
+    pad_lo->SetBottomMargin(0.3);
 
-  pad_hi->cd();
+    pad_hi->cd();
+  } else {
+    pad_hi = gPad;
+  }
+
   if (logx_) {
     pad_hi->SetLogx();
+
     h2_axes->GetXaxis()->SetMoreLogLabels();
     h2_axes->GetXaxis()->SetNoExponent();
   }
@@ -1535,7 +1546,7 @@ void drawBase::drawHisto_fromHistos(std::vector<TH1*> dataHistos, std::vector<TH
   }
 
   // Draw ratio
-  if (!noDATA && !noMC)
+  if (drawRatio && !noDATA && !noMC)
     drawHistRatio(pad_lo, dataHistos[0], mcHisto_sum, xAxis.c_str(), fitMin, fitMax);
 
   if (outputdir_ == "") {
@@ -1587,10 +1598,12 @@ void drawBase::drawHisto_fromHistos(std::vector<TH1*> dataHistos, std::vector<TH
 
     TH2D* h2_axes_log = new TH2D("axes_log", "", nBinsx, xMin, xMax, 10, 0.1 * yMin_log, yAxisMaxScaleLog_ * yMax);
 
-    h2_axes_log->GetXaxis()->SetTitleOffset(1.1);
-    h2_axes_log->GetYaxis()->SetTitleOffset(1.2);
-    h2_axes_log->GetYaxis()->SetTitleSize(0.045);
-    h2_axes_log->GetXaxis()->SetLabelSize(0.);
+    if (drawRatio) {
+      h2_axes_log->GetXaxis()->SetTitleOffset(1.1);
+      h2_axes_log->GetYaxis()->SetTitleOffset(1.2);
+      h2_axes_log->GetYaxis()->SetTitleSize(0.045);
+      h2_axes_log->GetXaxis()->SetLabelSize(0.);
+    }
 
     //TH2D* h2_axes_log = new TH2D("axes_log", "", nBinsx, xMin, xMax, 10, 0.1*yMin_log, 100.*yMax);
     if (xAxisMin_ != 9999.) {

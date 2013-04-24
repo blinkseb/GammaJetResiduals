@@ -5,6 +5,8 @@
 #include <TFile.h>
 #include <TGraphErrors.h>
 #include <TParameter.h>
+#include <TVirtualFitter.h>
+#include <TColor.h>
 
 #include "drawBase.h"
 #include "fitTools.h"
@@ -18,6 +20,8 @@
 bool ELIF_ = false;
 bool FIXM_ = false;
 bool OUTPUT_GRAPHS = false;
+
+#define LIGHT_RED TColor::GetColor(0xcf, 0xa0, 0xa1)
 
 void setGraphStyle(TGraphErrors* graph, int markerStyle, int markerColor, int markerSize = 1) {
   graph->SetMarkerStyle(markerStyle);
@@ -229,42 +233,35 @@ void drawGraphs(TGraphErrors* data, TGraphErrors* mc, double xMin, double xMax, 
   gr_resp_ratio->SetMarkerSize(1.5);
   gr_resp_ratio->SetMarkerColor(kBlue - 6);
 
-  TF1* ratioFit = new TF1("ratioFit", "[0]", xMin, xMax);
-  ratioFit->SetParameter(0, 0.);
+  TF1* ratioFit = new TF1("ratioFit", "pol0", xMin, xMax);
+  ratioFit->SetParameter(0, 1.);
+  ratioFit->SetParameter(1, 0.);
   ratioFit->SetLineColor(46);
   //ratioFit->SetLineColor(kBlue - 6);
-  ratioFit->SetLineWidth(1.5);
-  gr_resp_ratio->Fit(ratioFit, "RQ");
+  ratioFit->SetLineWidth(1);
+  gr_resp_ratio->Fit(ratioFit, "VFR");
+
+  TH1D* errors = new TH1D("errors", "errors", 100, xMin, xMax);
+  (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors);
+  errors->SetStats(false);
+  errors->SetFillColor(LIGHT_RED);
+  errors->SetLineColor(kRed);
+  errors->SetFillStyle(1001);
 
   double fitValue = ratioFit->GetParameter(0);
   double fitError = ratioFit->GetParError(0);
 
-  double errorY1 = fitValue - fitError;
-  double errorY2 = fitValue + fitError;
-
-  bool showErrors = true;
-  if (fitValue < lowPadY1 || fitValue > lowPadY2) {
-    showErrors = false;
-  }
-
-  if (errorY2 > lowPadY2)
-    errorY2 = lowPadY2;
-
-  if (errorY1 < lowPadY1)
-    errorY1 = lowPadY1;
-
-  TBox* errors = new TBox(xMin, errorY1, xMax, errorY2);
-  errors->SetFillColor(kBlue - 10);
-  errors->SetFillStyle(1001);
-
-  TPaveText* fitlabel = new TPaveText(0.55, 0.77, 0.88, 0.83, "brNDC");
+  TPaveText* fitlabel = new TPaveText(0.43, 0.77, 0.78, 0.81, "brNDC");
   fitlabel->SetTextSize(0.08);
   fitlabel->SetFillColor(0);
-  TString fitLabelText = TString::Format("Fit: %.4f #pm %.4f", fitValue, fitError);
+  TString fitLabelText = TString::Format("#font[42]{Fit: %.4f #pm %.4f + (%.2e #pm %.2e)x}", fitValue, fitError, ratioFit->GetParameter(1), ratioFit->GetParError(1));
   fitlabel->AddText(fitLabelText);
 
+  /*
   if (showErrors)
     errors->Draw("same");
+  */
+  errors->Draw("e3 same");
 
   line_one->Draw("same");
   line_plus_resp->Draw("same");
