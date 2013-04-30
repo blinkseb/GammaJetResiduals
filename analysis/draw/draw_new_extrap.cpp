@@ -60,7 +60,7 @@ void drawGraphs(TGraphErrors* data, TGraphErrors* mc, const std::string& method,
     data_fct->SetLineStyle(2);
 
     data->Fit(data_fct, "RQN");
-    (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_data);
+    (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_data, 0.68);
 
     mc_fct = new TF1("mc_fct", "[0] - x*x*[1]", 0, 1);
     mc_fct->SetLineColor(mcMarkerColor);
@@ -68,7 +68,7 @@ void drawGraphs(TGraphErrors* data, TGraphErrors* mc, const std::string& method,
     mc_fct->SetLineStyle(2);
 
     mc->Fit(mc_fct, "RQN");
-    (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_mc);
+    (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_mc, 0.68);
   } else {
     data_fct = new TF1("data_fct", "[0] + x*[1]", 0, 1);
     data_fct->SetLineColor(dataMarkerColor);
@@ -76,7 +76,7 @@ void drawGraphs(TGraphErrors* data, TGraphErrors* mc, const std::string& method,
     data_fct->SetLineStyle(2);
 
     data->Fit(data_fct, "RQN");
-    (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_data);
+    (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_data, 0.68);
 
     mc_fct = new TF1("mc_fct", "[0] + x*[1]", 0, 1);
     mc_fct->SetLineColor(mcMarkerColor);
@@ -84,7 +84,7 @@ void drawGraphs(TGraphErrors* data, TGraphErrors* mc, const std::string& method,
     mc_fct->SetLineStyle(2);
 
     mc->Fit(mc_fct, "RQN");
-    (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_mc);
+    (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_mc, 0.68);
 
   }
 
@@ -190,7 +190,7 @@ void drawCombinedGraphs(TGraphErrors* balancingData, TGraphErrors* balancingMC, 
   balancingData_fct->SetLineStyle(2);
 
   balancingData->Fit(balancingData_fct, "QRN");
-  (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_bal_data);
+  (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_bal_data, 0.68);
 
   TF1* balancingMC_fct = new TF1("mc_fct", "[0] - x*x*[1]", 0, 1);
   balancingMC_fct->SetLineColor(kBlue);
@@ -198,7 +198,7 @@ void drawCombinedGraphs(TGraphErrors* balancingData, TGraphErrors* balancingMC, 
   balancingMC_fct->SetLineStyle(2);
 
   balancingMC->Fit(balancingMC_fct, "QRN");
-  (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_bal_mc);
+  (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_bal_mc, 0.68);
 
   TF1* mpfData_fct = new TF1("mpfData_fct", "[0] + x*[1]", 0, 1);
   mpfData_fct->SetLineColor(kRed);
@@ -206,7 +206,7 @@ void drawCombinedGraphs(TGraphErrors* balancingData, TGraphErrors* balancingMC, 
   mpfData_fct->SetLineStyle(2);
 
   mpfData->Fit(mpfData_fct, "QRN");
-  (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_mpf_data);
+  (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_mpf_data, 0.68);
 
   TF1* mpfMC_fct = new TF1("mc_fct", "[0] + x*[1]", 0, 1);
   mpfMC_fct->SetLineColor(46);
@@ -214,7 +214,11 @@ void drawCombinedGraphs(TGraphErrors* balancingData, TGraphErrors* balancingMC, 
   mpfMC_fct->SetLineStyle(2);
 
   mpfMC->Fit(mpfMC_fct, "QRN");
-  (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_mpf_mc);
+  (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_mpf_mc, 0.68);
+
+  TString balancing_ratio_legend = TString::Format("#color[4]{#scale[1]{r_{bal} = %.03f #pm %.03f}}", balancingData_fct->GetParameter(0) / balancingMC_fct->GetParameter(0), sqrt(pow(balancingData_fct->GetParError(0), 2) + pow(balancingMC_fct->GetParError(0), 2)));
+
+  TString mpf_ratio_legend = TString::Format("#color[2]{#scale[1]{r_{MPF} = %.03f #pm %.03f}}", mpfData_fct->GetParameter(0) / mpfMC_fct->GetParameter(0), sqrt(pow(mpfData_fct->GetParError(0), 2) + pow(mpfMC_fct->GetParError(0), 2)));
 
   TMultiGraph* mg = new TMultiGraph();
   mg->Add(balancingData);
@@ -275,6 +279,10 @@ void drawCombinedGraphs(TGraphErrors* balancingData, TGraphErrors* balancingMC, 
   // Energy
   tl.DrawLatex(0.80, 0.96, "#sqrt{s} = 8 TeV");
 
+  // Ratios
+  tl.DrawLatex(0.18, 0.515, balancing_ratio_legend);
+  tl.DrawLatex(0.18, 0.47, mpf_ratio_legend);
+
   canvas->Print((outputName + ".pdf").c_str());
 
   delete legend;
@@ -314,8 +322,8 @@ void drawCombinedGraphs(TGraphErrors* balancingData, TGraphErrors* balancingMC, 
   balancingRatio_fct->SetLineStyle(2);
 
   balancing_ratio->Fit(balancingRatio_fct, "QRN");
-  (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_bal);
-  TString balancing_ratio_legend = TString::Format("#color[4]{#splitline{#scale[1.2]{r = %.03f #pm %.03f}}{#scale[0.8]{#chi^{2} / NDF: %.02f / %d}}}", balancingRatio_fct->GetParameter(0), balancingRatio_fct->GetParError(0), balancingRatio_fct->GetChisquare(), balancingRatio_fct->GetNDF());
+  (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_bal, 0.68);
+  balancing_ratio_legend = TString::Format("#color[4]{#splitline{#scale[1.2]{r = %.03f #pm %.03f}}{#scale[0.8]{#chi^{2} / NDF: %.02f / %d}}}", balancingRatio_fct->GetParameter(0), balancingRatio_fct->GetParError(0), balancingRatio_fct->GetChisquare(), balancingRatio_fct->GetNDF());
 
   TF1* mpfRatio_fct = new TF1("mpfRatio_fct", "[0] + x*[1]", 0, 1);
   mpfRatio_fct->SetLineColor(kRed);
@@ -323,8 +331,8 @@ void drawCombinedGraphs(TGraphErrors* balancingData, TGraphErrors* balancingMC, 
   mpfRatio_fct->SetLineStyle(2);
 
   mpf_ratio->Fit(mpfRatio_fct, "QRN");
-  (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_mpf);
-  TString mpf_ratio_legend = TString::Format("#color[2]{#splitline{#scale[1.2]{r = %.03f #pm %.03f}}{#scale[0.8]{#chi^{2} / NDF: %.02f / %d}}}", mpfRatio_fct->GetParameter(0), mpfRatio_fct->GetParError(0), mpfRatio_fct->GetChisquare(), mpfRatio_fct->GetNDF());
+  (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors_mpf, 0.68);
+  mpf_ratio_legend = TString::Format("#color[2]{#splitline{#scale[1.2]{r = %.03f #pm %.03f}}{#scale[0.8]{#chi^{2} / NDF: %.02f / %d}}}", mpfRatio_fct->GetParameter(0), mpfRatio_fct->GetParError(0), mpfRatio_fct->GetChisquare(), mpfRatio_fct->GetNDF());
 
   TMultiGraph* mg2 = new TMultiGraph();
   mg2->Add(balancing_ratio);

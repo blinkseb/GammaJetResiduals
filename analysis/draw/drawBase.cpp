@@ -618,7 +618,7 @@ void drawBase::drawHisto_vs_pt(std::vector<std::pair<float, float> > ptBins, con
     //errors->SetFillStyle(1001);
 
     TH1D* errors = new TH1D("errors", "errors", 100, ptPhotMin, ptPhotMax);
-    (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors);
+    (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors, 0.68);
     errors->SetStats(false);
     errors->SetFillColor(LIGHT_RED);
     errors->SetLineColor(46);
@@ -3744,7 +3744,7 @@ void drawBase::drawHisto_fromHistos(std::vector<TH1*> dataHistos, std::vector<TH
     fitlabel->Draw("same");
 
     TH1D* errors = new TH1D("errors", "errors", 100, npvMin, npvMax);
-    (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors);
+    (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors, 0.68);
     errors->SetStats(false);
     errors->SetLineColor(46);
     errors->SetFillColor(LIGHT_RED);
@@ -3918,7 +3918,7 @@ void drawBase::drawHisto_fromHistos(std::vector<TH1*> dataHistos, std::vector<TH
     //std::cout << "-> ChiSquare: " << constline->GetChisquare() << "   NDF: " << constline->GetNDF() << std::endl;
 
     TH1D* errors = new TH1D("errors", "errors", 100, npvMin, npvMax);
-    (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors);
+    (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors, 0.68);
     errors->SetStats(false);
     errors->SetFillColor(LIGHT_RED);
     errors->SetLineColor(46);

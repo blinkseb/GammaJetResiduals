@@ -88,4 +88,20 @@ for trigger_runs, triggerslist in triggers.items():
 
     print
 
+ # Merge everything
+toMerge = {}
+for trigger_runs, triggerslist in triggers.items():
+  for json in jsonFiles:
+    json_name = os.path.splitext(json[0])[0]
+
+    for trigger in triggerslist:
+      root_file = "pu_truth_data_photon_2012_true_%s_%s_%d_%d_75bins.root" % (json_name, trigger.rstrip("_*"), trigger_runs[0], trigger_runs[1])
+      if os.path.exists(root_file):
+        toMerge.setdefault(trigger.rstrip("_*"), []).append(root_file)
+
+for trigger, files in toMerge.items():
+  output_file = "merged/pu_truth_data_photon_2012_true_%s_75bins.root" % trigger
+  input_files = " ".join(files)
+  os.system("hadd %s %s" % (output_file, input_files))
+
 #shutil.rmtree(tempFolder)

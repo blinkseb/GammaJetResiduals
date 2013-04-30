@@ -242,7 +242,7 @@ void drawGraphs(TGraphErrors* data, TGraphErrors* mc, double xMin, double xMax, 
   gr_resp_ratio->Fit(ratioFit, "VFR");
 
   TH1D* errors = new TH1D("errors", "errors", 100, xMin, xMax);
-  (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors);
+  (TVirtualFitter::GetFitter())->GetConfidenceIntervals(errors, 0.68);
   errors->SetStats(false);
   errors->SetFillColor(LIGHT_RED);
   errors->SetLineColor(kRed);
