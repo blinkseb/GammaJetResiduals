@@ -73,12 +73,13 @@ def createProcess(runOnMC, runCHS, correctMETWithT1, processCaloJets, globalTag)
     getattr(process,"pfNoTau" + p).enable = False
     getattr(process,"pfNoJet" + p).enable = True
 
-    # verbose flags for the PF2PAT modules
-    getattr(process,"pfNoMuon" + p).verbose = False
+    getattr(process,"patElectrons" + p).embedTrack = True
 
+    getattr(process,"patMuons" + p).embedTrack = True
     # enable delta beta correction for muon selection in PF2PAT?
-    getattr(process,"pfIsolatedMuons" + p).doDeltaBetaCorrection = False
+    getattr(process,"pfIsolatedMuons" + p).doDeltaBetaCorrection = True
 
+    getattr(process, "patJets" + p).embedPFCandidates = False
     # Keep only jets with pt > 2 Gev
     getattr(process, "selectedPatJets" + p).cut = "pt > 2";
 
@@ -342,7 +343,6 @@ def createProcess(runOnMC, runCHS, correctMETWithT1, processCaloJets, globalTag)
       'keep *_cleanPatJets*_*_*', 'keep *_cleanPatHemispheres*_*_*', 'keep *_cleanPatPFParticles*_*_*',
       'keep *_cleanPatTrackCands*_*_*',
       'drop *_*PFlow_caloTowers_*',
-      'keep *recoTracks_generalTracks_*_*',
       # Type I residual
       'drop *_selectedPatJetsForMET*_*_PAT',
       'keep *_patPFMet*_*_PAT', # Keep raw met
