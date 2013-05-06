@@ -1442,6 +1442,7 @@ void GammaJetFilter::muonsToTree(const edm::Handle<pat::MuonCollection>& muons, 
   int n = muons->size();
   static int   id[30];
   static float isolation[30];
+  static float delta_beta_isolation[30];
   static float pt[30];
   static float px[30];
   static float py[30];
@@ -1458,22 +1459,23 @@ void GammaJetFilter::muonsToTree(const edm::Handle<pat::MuonCollection>& muons, 
       break;
 
     // See https://twiki.cern.ch/twiki/bin/view/CMS/TopLeptonPlusJetsRefSel_mu
-    bool muonID = it->isGlobalMuon() && it->isTrackerMuon();
-    muonID     &= it->pt() > 20.;
-    muonID     &= fabs(it->eta()) < 2.1;
-    muonID     &= it->muonID("GlobalMuonPromptTight");
+    bool muonID = it->isGlobalMuon();
     //FIXME: reco::Tracks need to be keept in PF2PAT.
     //It's not the case right now, so muon ID will be incorrect
-    muonID     &= (it->innerTrack().isNonnull() && it->innerTrack()->numberOfValidHits() > 10);
-    muonID     &= (it->dB() < 0.02);
-    muonID     &= it->innerTrack().isNonnull() && it->innerTrack()->hitPattern().pixelLayersWithMeasurement() >= 1;
-    muonID     &= it->numberOfMatches() > 1;
-    muonID     &= fabs(pv.z() - it->vertex().z()) < 1.;
+    muonID     &= it->globalTrack()->normalizedChi2() < 10.;
+    muonID     &= it->globalTrack()->hitPattern().numberOfValidMuonHits() > 0;
+    muonID     &= it->numberOfMatchedStations() > 1;
+    muonID     &= it->dB() < 0.2;
+    muonID     &= fabs(it->muonBestTrack()->dz(pv.position())) < 0.5;
+    muonID     &= it->innerTrack()->hitPattern().numberOfValidPixelHits() > 0;
+    muonID     &= it->track()->hitPattern().trackerLayersWithMeasurement() > 5;
 
-    float iso      = (it->trackIso() + it->ecalIso() + it->hcalIso()) / (it->pt());
+    float relIso = (it->chargedHadronIso() + it->neutralHadronIso() + it->photonIso()) / it->pt();
+    float deltaBetaRelIso = (it->chargedHadronIso() + std::max((it->neutralHadronIso() + it->photonIso()) - 0.5 * it->puChargedHadronIso(), 0.0)) / it->pt();
 
     id[i]          = muonID;
-    isolation[i]   = iso;
+    isolation[i]   = relIso;
+    delta_beta_isolation[i] = deltaBetaRelIso;
     pt[i]          = muon.pt();
     px[i]          = muon.px();
     py[i]          = muon.py();
@@ -1485,7 +1487,8 @@ void GammaJetFilter::muonsToTree(const edm::Handle<pat::MuonCollection>& muons, 
 
   updateBranch(mMuonsTree, &n, "n", "I");
   updateBranchArray(mMuonsTree, id, "id", "n", "I");
-  updateBranchArray(mMuonsTree, isolation, "isolation", "n");
+  updateBranchArray(mMuonsTree, isolation, "relative_isolation", "n");
+  updateBranchArray(mMuonsTree, delta_beta_isolation, "delta_beta_relative_isolation", "n");
   updateBranchArray(mMuonsTree, pt, "pt", "n");
   updateBranchArray(mMuonsTree, px, "px", "n");
   updateBranchArray(mMuonsTree, py, "py", "n");
