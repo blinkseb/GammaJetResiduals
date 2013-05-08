@@ -86,6 +86,8 @@ process.gammaJet = cms.EDFilter('GammaJetFilter',
     ptHatMin = cms.untracked.double(ptHatMin),
     ptHatMax = cms.untracked.double(ptHatMax),
 
+    dumpAllGenParticles = cms.untracked.bool(False),
+
     runOnNonCHS   = cms.untracked.bool(False),
     runOnCHS      = cms.untracked.bool(True),
 

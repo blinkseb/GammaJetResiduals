@@ -22,6 +22,7 @@ Implementation:
 #include <cstdio>
 #include <fstream>
 #include <map>
+#include <unordered_map>
 #include <memory>
 #include <string>
 
@@ -214,6 +215,10 @@ class GammaJetFilter : public edm::EDFilter {
     TH1F* mSelectedSecondJetPhotonDeltaPhi;
     TH1F* mSelectedSecondJetPhotonDeltaR;
 
+    // Cache for MC particles
+    bool mDumpAllMCParticles;
+    std::unordered_map<const reco::Candidate*, int> mParticlesIndexes;
+
     void particleToTree(const reco::Candidate* particle, TTree* t, std::vector<boost::shared_ptr<void> >& addresses);
     
     void updateBranch(TTree* tree, void* address, const std::string& name, const std::string& type = "F");
@@ -314,6 +319,9 @@ GammaJetFilter::GammaJetFilter(const edm::ParameterSet& iConfig):
 
     mPtHatMin = iConfig.getUntrackedParameter<double>("ptHatMin", -1.);
     mPtHatMax = iConfig.getUntrackedParameter<double>("ptHatMax", -1.);
+
+    // SHould we dump all MC particles?
+    mDumpAllMCParticles = iConfig.getUntrackedParameter<bool>("dumpAllGenParticles", false);
   }
 
   if (runOnNonCHS) {
@@ -1462,13 +1470,17 @@ void GammaJetFilter::muonsToTree(const edm::Handle<pat::MuonCollection>& muons, 
     bool muonID = it->isGlobalMuon();
     //FIXME: reco::Tracks need to be keept in PF2PAT.
     //It's not the case right now, so muon ID will be incorrect
-    muonID     &= it->globalTrack()->normalizedChi2() < 10.;
-    muonID     &= it->globalTrack()->hitPattern().numberOfValidMuonHits() > 0;
-    muonID     &= it->numberOfMatchedStations() > 1;
-    muonID     &= it->dB() < 0.2;
-    muonID     &= fabs(it->muonBestTrack()->dz(pv.position())) < 0.5;
-    muonID     &= it->innerTrack()->hitPattern().numberOfValidPixelHits() > 0;
-    muonID     &= it->track()->hitPattern().trackerLayersWithMeasurement() > 5;
+    if (it->globalTrack().isNull() || it->innerTrack().isNull() || it->muonBestTrack().isNull() || it->track().isNull()) {
+      muonID = false;
+    } else {
+      muonID     &= it->globalTrack()->normalizedChi2() < 10.;
+      muonID     &= it->globalTrack()->hitPattern().numberOfValidMuonHits() > 0;
+      muonID     &= it->numberOfMatchedStations() > 1;
+      muonID     &= it->dB() < 0.2;
+      muonID     &= fabs(it->muonBestTrack()->dz(pv.position())) < 0.5;
+      muonID     &= it->innerTrack()->hitPattern().numberOfValidPixelHits() > 0;
+      muonID     &= it->track()->hitPattern().trackerLayersWithMeasurement() > 5;
+    }
 
     float relIso = (it->chargedHadronIso() + it->neutralHadronIso() + it->photonIso()) / it->pt();
     float deltaBetaRelIso = (it->chargedHadronIso() + std::max((it->neutralHadronIso() + it->photonIso()) - 0.5 * it->puChargedHadronIso(), 0.0)) / it->pt();
@@ -1502,90 +1514,107 @@ void GammaJetFilter::muonsToTree(const edm::Handle<pat::MuonCollection>& muons, 
 
 void GammaJetFilter::genParticlesToTree(const edm::Handle<reco::GenParticleCollection>& genParticles) {
 
-  std::vector<int>* pdgId = new std::vector<int>();
-  std::vector<int>* status = new std::vector<int>();
-  std::vector<int>* index = new std::vector<int>();
-  std::vector<int>* numberOfMothers = new std::vector<int>();
+  std::vector<int> pdgId;
+  std::vector<int> status;
+  std::vector<int> index;
 
-  std::vector<int>* indexOfFirstMother = new std::vector<int>();
-  std::vector<int>* indexOfSecondMother = new std::vector<int>();
+  std::vector<std::vector<int>> indexOfMothers;
+  std::vector<std::vector<int>> indexOfDaughters;
 
-  std::vector<float>* energy = new std::vector<float>();
-  std::vector<float>* pt = new std::vector<float>();
-  std::vector<float>* px = new std::vector<float>();
-  std::vector<float>* py = new std::vector<float>();
-  std::vector<float>* pz = new std::vector<float>();
+  std::vector<float> energy;
+  std::vector<float> pt;
+  std::vector<float> px;
+  std::vector<float> py;
+  std::vector<float> pz;
 
-  std::vector<float>* eta = new std::vector<float>();
-  std::vector<float>* phi = new std::vector<float>();
+  std::vector<float> eta;
+  std::vector<float> phi;
 
-  int i = 0;
-  for (reco::GenParticleCollection::const_iterator it = genParticles->begin(); it != genParticles->end(); ++it, i++) {
+  size_t size = genParticles->size();
+  pdgId.reserve(size);
+  status.reserve(size);
+  index.reserve(size);
+  indexOfMothers.reserve(size);
+  indexOfDaughters.reserve(size);
+  energy.reserve(size);
+  pt.reserve(size);
+  px.reserve(size);
+  py.reserve(size);
+  pz.reserve(size);
+  eta.reserve(size);
+  phi.reserve(size);
+
+  int int_index = 0;
+  for (reco::GenParticleCollection::const_iterator it = genParticles->begin(); it != genParticles->end(); ++it, int_index++) {
     const reco::GenParticle& p = *it;
 
-    if (p.status() != 3)
+    if (! mDumpAllMCParticles && p.status() != 3)
       continue;
 
-    pdgId->push_back(p.pdgId());
-    index->push_back(i);
-    status->push_back(p.status());
-    numberOfMothers->push_back(p.numberOfMothers());
+    pdgId.push_back(p.pdgId());
+    index.push_back(int_index);
+    status.push_back(p.status());
 
-    energy->push_back(p.energy());
-    pt->push_back(p.pt());
-    px->push_back(p.px());
-    py->push_back(p.py());
-    pz->push_back(p.pz());
-    eta->push_back(p.eta());
-    phi->push_back(p.phi());
+    energy.push_back(p.energy());
+    pt.push_back(p.pt());
+    px.push_back(p.px());
+    py.push_back(p.py());
+    pz.push_back(p.pz());
+    eta.push_back(p.eta());
+    phi.push_back(p.phi());
 
-    int iMom1 = -1;
-    int iMom2 = -1;
+    std::vector<int> indexes;
+    indexes.reserve(p.numberOfMothers());
+    for (size_t i = 0; i < p.numberOfMothers(); i++) {
+      indexes.push_back(getMotherIndex(genParticles, p.mother(i)));
+    }
+    indexOfMothers.push_back(indexes);
 
-    if (p.numberOfMothers() > 0)
-      iMom1 = getMotherIndex(genParticles, p.mother(0));
-
-    if (p.numberOfMothers() > 1)
-      iMom2 = getMotherIndex(genParticles, p.mother(1));
-
-    indexOfFirstMother->push_back(iMom1);
-    indexOfSecondMother->push_back(iMom2);
+    indexes.clear();
+    indexes.reserve(p.numberOfDaughters());
+    for (size_t i = 0; i < p.numberOfDaughters(); i++) {
+      indexes.push_back(getMotherIndex(genParticles, p.daughter(i)));
+    }
+    indexOfDaughters.push_back(indexes);
   }
 
-  updateBranch(mGenParticlesTree, pdgId, "pdg_id");
-  updateBranch(mGenParticlesTree, index, "main_index");
-  updateBranch(mGenParticlesTree, status, "status");
-  updateBranch(mGenParticlesTree, numberOfMothers, "number_of_mothers");
-  updateBranch(mGenParticlesTree, indexOfFirstMother, "index_of_first_mother");
-  updateBranch(mGenParticlesTree, indexOfSecondMother, "index_of_second_mother");
+  auto* p_pdgId = &pdgId;
+  auto* p_index = &index;
+  auto* p_status = &status;
+  auto* p_indexOfMothers = &indexOfMothers;
+  auto* p_indexOfDaughters = &indexOfDaughters;
+  auto* p_energy = &energy;
+  auto* p_pt = &pt;
+  auto* p_px = &px;
+  auto* p_py = &py;
+  auto* p_pz = &pz;
+  auto* p_eta = &eta;
+  auto* p_phi = &phi;
+
+  updateBranch(mGenParticlesTree, p_pdgId, "pdg_id");
+  updateBranch(mGenParticlesTree, p_index, "main_index");
+  updateBranch(mGenParticlesTree, p_status, "status");
+  updateBranch(mGenParticlesTree, p_indexOfMothers, "index_of_mothers");
+  updateBranch(mGenParticlesTree, p_indexOfDaughters, "index_of_daughters");
   
-  updateBranch(mGenParticlesTree, energy, "energy");
-  updateBranch(mGenParticlesTree, pt, "pt");
-  updateBranch(mGenParticlesTree, px, "px");
-  updateBranch(mGenParticlesTree, py, "py");
-  updateBranch(mGenParticlesTree, pz, "pz");
-  updateBranch(mGenParticlesTree, eta, "eta");
-  updateBranch(mGenParticlesTree, phi, "phi");
+  updateBranch(mGenParticlesTree, p_energy, "energy");
+  updateBranch(mGenParticlesTree, p_pt, "pt");
+  updateBranch(mGenParticlesTree, p_px, "px");
+  updateBranch(mGenParticlesTree, p_py, "py");
+  updateBranch(mGenParticlesTree, p_pz, "pz");
+  updateBranch(mGenParticlesTree, p_eta, "eta");
+  updateBranch(mGenParticlesTree, p_phi, "phi");
 
   mGenParticlesTree->Fill();
-
-  delete pdgId;
-  delete index;
-  delete status;
-  delete numberOfMothers;
-  delete indexOfFirstMother;
-  delete indexOfSecondMother;
-  delete energy;
-  delete pt;
-  delete px;
-  delete py;
-  delete pz;
-  delete eta;
-  delete phi;
+  mParticlesIndexes.clear();
 }
 
 int GammaJetFilter::getMotherIndex(const edm::Handle<reco::GenParticleCollection>& genParticles, const reco::Candidate* mother) {
   const float EPSILON = 0.0001;
+
+  // Look in cache
+  if (mParticlesIndexes.find(mother) != mParticlesIndexes.end())
+    return mParticlesIndexes[mother];
   
   int i = 0;
   for (reco::GenParticleCollection::const_iterator it = genParticles->begin(); it != genParticles->end(); ++it, i++) {  
@@ -1603,6 +1632,8 @@ int GammaJetFilter::getMotherIndex(const edm::Handle<reco::GenParticleCollection
     if (fabs(p.pz() - mother->pz()) > EPSILON)
       continue;
 
+    // Cache
+    mParticlesIndexes[mother] = i;
     return i;
   }
 
