@@ -510,6 +510,11 @@ void GammaJetFinalizer::runAnalysis() {
       break;
     }
 
+#if ADD_TREES
+    if (mIsMC)
+      genParticles.GetEntry(i);
+#endif
+
     analysis.GetEntry(i);
     photon.GetEntry(i);
     genPhoton.GetEntry(i);
