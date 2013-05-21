@@ -81,6 +81,8 @@ Implementation:
 
 #include <TParameter.h>
 #include <TTree.h>
+#include <TClonesArray.h>
+#include <TLorentzVector.h>
 
 #include <boost/regex.hpp>
 
@@ -215,6 +217,10 @@ class GammaJetFilter : public edm::EDFilter {
     TH1F* mSelectedSecondJetPhotonDeltaPhi;
     TH1F* mSelectedSecondJetPhotonDeltaR;
 
+    // For B / C jets neutrinos
+    TClonesArray* mNeutrinos;
+    TClonesArray* mNeutrinosPDG;
+
     // Cache for MC particles
     bool mDumpAllMCParticles;
     std::unordered_map<const reco::Candidate*, int> mParticlesIndexes;
@@ -222,8 +228,6 @@ class GammaJetFilter : public edm::EDFilter {
     void particleToTree(const reco::Candidate* particle, TTree* t, std::vector<boost::shared_ptr<void> >& addresses);
     
     void updateBranch(TTree* tree, void* address, const std::string& name, const std::string& type = "F");
-    template<typename T>
-      void updateBranch(TTree* tree, T*& address, const std::string& name);
     template<typename U>
       void updateBranch(TTree* tree, std::vector<U>*& address, const std::string& name);
 
@@ -233,7 +237,7 @@ class GammaJetFilter : public edm::EDFilter {
     void metsToTree(const pat::MET& met, const pat::MET& rawMet, const std::vector<TTree*>& trees);
     void metToTree(const pat::MET* met, TTree* tree, TTree* genTree);
     void jetsToTree(const pat::Jet* firstJet, const pat::Jet* secondJet, const std::vector<TTree*>& trees);
-    void jetToTree(const pat::Jet* jet, TTree* tree, TTree* genTree);
+    void jetToTree(const pat::Jet* jet, bool findNeutrinos, TTree* tree, TTree* genTree);
     void electronsToTree(const edm::Handle<pat::ElectronCollection>& electrons, const reco::Vertex& pv);
     void muonsToTree(const edm::Handle<pat::MuonCollection>& muons, const reco::Vertex& pv);
 
@@ -298,7 +302,6 @@ GammaJetFilter::GammaJetFilter(const edm::ParameterSet& iConfig):
   }
 
   edm::Service<TFileService> fs;
-  mGenParticlesTree = fs->make<TTree>("gen_particles", "genParticles tree");
   mPhotonTree = fs->make<TTree>("photon", "photon tree");
   mPhotonGenTree = fs->make<TTree>("photon_gen", "photon gen tree");
   mAnalysisTree = fs->make<TTree>("analysis", "analysis tree");
@@ -319,9 +322,6 @@ GammaJetFilter::GammaJetFilter(const edm::ParameterSet& iConfig):
 
     mPtHatMin = iConfig.getUntrackedParameter<double>("ptHatMin", -1.);
     mPtHatMax = iConfig.getUntrackedParameter<double>("ptHatMax", -1.);
-
-    // SHould we dump all MC particles?
-    mDumpAllMCParticles = iConfig.getUntrackedParameter<bool>("dumpAllGenParticles", false);
   }
 
   if (runOnNonCHS) {
@@ -394,6 +394,13 @@ GammaJetFilter::GammaJetFilter(const edm::ParameterSet& iConfig):
 
   mPFIsolator.initializePhotonIsolation(true);
   mPFIsolator.setConeSize(0.3);
+
+  mNeutrinos = NULL;
+  mNeutrinosPDG = NULL;
+  if (mIsMC) {
+    mNeutrinos = new TClonesArray("TLorentzVector", 3);
+    mNeutrinosPDG = new TClonesArray("TParameter<int>", 3);
+  }
 }
 
 
@@ -402,6 +409,9 @@ GammaJetFilter::~GammaJetFilter()
 
   // do anything here that needs to be done at desctruction time
   // (e.g. close files, deallocate resources etc.)
+
+  delete mNeutrinos;
+  delete mNeutrinosPDG;
 }
 
 void GammaJetFilter::createTrees(const std::string& rootName, TFileService& fs) {
@@ -434,16 +444,6 @@ void GammaJetFilter::updateBranch(TTree* tree, void* address, const std::string&
     branch = tree->Branch(name.c_str(), address, std::string(name + "/" + type).c_str()); 
   } else {
     branch->SetAddress(address);
-  }
-}
-
-template<typename T>
-void GammaJetFilter::updateBranch(TTree* tree, T*& address, const std::string& name) {
-  TBranch* branch = tree->GetBranch(name.c_str());
-  if (branch == NULL) {
-    branch = tree->Branch(name.c_str(), address); 
-  } else {
-    branch->SetAddress(&address);
   }
 }
 
@@ -699,13 +699,6 @@ bool GammaJetFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
   iEvent.getByLabel("selectedPatMuonsPFlowAK5chs", muons);
   muonsToTree(muons, primaryVertex);
 
-  if (mIsMC) {
-    // Gen particles
-    edm::Handle<reco::GenParticleCollection> genParticles;
-    iEvent.getByLabel("genParticles", genParticles);
-    genParticlesToTree(genParticles);
-  }
-  
   mSelectedEvents->SetVal(mSelectedEvents->GetVal() + 1);
   return true;
 }
@@ -1309,20 +1302,48 @@ void GammaJetFilter::photonToTree(const pat::PhotonRef& photon, const edm::Event
 }
 
 void GammaJetFilter::jetsToTree(const pat::Jet* firstJet, const pat::Jet* secondJet, const std::vector<TTree*>& trees) {
-  jetToTree(firstJet, trees[0], trees[4]);
-  jetToTree(secondJet, trees[1], trees[5]);
+  jetToTree(firstJet, true, trees[0], trees[4]);
+  jetToTree(secondJet, false, trees[1], trees[5]);
 
   // Raw jets
   const pat::Jet* rawJet = (firstJet) ? firstJet->userData<pat::Jet>("rawJet") : NULL;
-  jetToTree(rawJet, trees[2], NULL);
+  jetToTree(rawJet, false, trees[2], NULL);
 
   rawJet = (secondJet) ? secondJet->userData<pat::Jet>("rawJet") : NULL;
-  jetToTree(rawJet, trees[3], NULL);
+  jetToTree(rawJet, false, trees[3], NULL);
 }
 
-void GammaJetFilter::jetToTree(const pat::Jet* jet, TTree* tree, TTree* genTree) {
+void findNeutrinos(const reco::Candidate* parent, std::vector<const reco::Candidate*>& neutrinos) {
+
+  int pdg_id = abs(parent->pdgId());
+  if (pdg_id == 12 || pdg_id == 14 || pdg_id == 16) {
+    if (std::find_if(neutrinos.begin(), neutrinos.end(), [parent] (const reco::Candidate* candidate) -> bool {
+          static double EPSILON = 0.0001;
+          bool same = (candidate->pdgId() == parent->pdgId());
+          same &= (fabs(candidate->px() - candidate->px()) < EPSILON);
+          same &= (fabs(candidate->py() - candidate->py()) < EPSILON);
+          same &= (fabs(candidate->pz() - candidate->pz()) < EPSILON);
+
+          return same;
+
+      }) == neutrinos.end()) {
+      neutrinos.push_back(parent);
+    }
+    return;
+  }
+
+  for (unsigned int i = 0; i < parent->numberOfDaughters(); i++) {
+    const reco::Candidate* d = parent->daughter(i);
+    findNeutrinos(d, neutrinos);
+  }
+}
+
+void GammaJetFilter::jetToTree(const pat::Jet* jet, bool _findNeutrinos, TTree* tree, TTree* genTree) {
   std::vector<boost::shared_ptr<void> > addresses;
   particleToTree(jet, tree, addresses);
+
+  mNeutrinos->Clear("C");
+  mNeutrinosPDG->Clear("C");
 
   if (jet) {
     float area = jet->jetArea();
@@ -1362,10 +1383,58 @@ void GammaJetFilter::jetToTree(const pat::Jet* jet, TTree* tree, TTree* genTree)
 
   if (genTree) {
     particleToTree((jet) ? jet->genJet() : NULL, genTree, addresses);
-    // Add parton id
+
+    if (_findNeutrinos) {
+      static bool init = false;
+      if (! init) {
+        genTree->Branch("neutrinos", &mNeutrinos, 32000, 0);
+        genTree->Branch("neutrinos_pdg_id", &mNeutrinosPDG, 32000, 0);
+        init = true;
+      }
+    }
+
+    if (jet && _findNeutrinos) {
+      const reco::Candidate* parton = (jet) ? jet->genParton() : NULL;
+
+      if (parton) {
+        if (abs(parton->pdgId()) == 5 || abs(parton->pdgId()) == 4) {
+
+          std::vector<const reco::Candidate*> neutrinos;
+          findNeutrinos(parton, neutrinos);
+
+          if (neutrinos.size() > 0) {
+            // Build TCloneArray of TLorentzVector
+            unsigned int index = 0;
+            for (const reco::Candidate* neutrino: neutrinos) {
+              TLorentzVector* p4 = (TLorentzVector*) mNeutrinos->ConstructedAt(index);
+              p4->SetPxPyPzE(neutrino->px(), neutrino->py(), neutrino->pz(), neutrino->energy());
+
+              TParameter<int>* pdg_id = (TParameter<int>*) mNeutrinosPDG->ConstructedAt(index++);
+              pdg_id->SetVal(neutrino->pdgId());
+            }
+          }
+        }
+
+      }
+    }
+
+    // Add parton id and pt
     const reco::Candidate* parton = (jet) ? jet->genParton() : NULL;
     int pdgId = (parton) ? parton->pdgId() : 0;
     updateBranch(genTree, &pdgId, "parton_pdg_id", "I");
+
+    TLorentzVector parton_p4;
+    if (parton) {
+      parton_p4.SetPxPyPzE(parton->px(), parton->py(), parton->pz(), parton->energy());
+    }
+    TLorentzVector* p_parton_p4 = &parton_p4;
+
+    TBranch* branch = genTree->GetBranch("parton_p4");
+    if (branch == NULL) {
+      branch = genTree->Branch("parton_p4", &p_parton_p4);
+    } else {
+      branch->SetAddress(&p_parton_p4);
+    }
 
     int flavour = (jet) ? jet->partonFlavour() : 0;
     updateBranch(genTree, &flavour, "parton_flavour", "I");
@@ -1510,134 +1579,6 @@ void GammaJetFilter::muonsToTree(const edm::Handle<pat::MuonCollection>& muons, 
   updateBranchArray(mMuonsTree, charge, "charge", "n", "I");
 
   mMuonsTree->Fill();
-}
-
-void GammaJetFilter::genParticlesToTree(const edm::Handle<reco::GenParticleCollection>& genParticles) {
-
-  std::vector<int> pdgId;
-  std::vector<int> status;
-  std::vector<int> index;
-
-  std::vector<std::vector<int>> indexOfMothers;
-  std::vector<std::vector<int>> indexOfDaughters;
-
-  std::vector<float> energy;
-  std::vector<float> pt;
-  std::vector<float> px;
-  std::vector<float> py;
-  std::vector<float> pz;
-
-  std::vector<float> eta;
-  std::vector<float> phi;
-
-  size_t size = genParticles->size();
-  pdgId.reserve(size);
-  status.reserve(size);
-  index.reserve(size);
-  indexOfMothers.reserve(size);
-  indexOfDaughters.reserve(size);
-  energy.reserve(size);
-  pt.reserve(size);
-  px.reserve(size);
-  py.reserve(size);
-  pz.reserve(size);
-  eta.reserve(size);
-  phi.reserve(size);
-
-  int int_index = 0;
-  for (reco::GenParticleCollection::const_iterator it = genParticles->begin(); it != genParticles->end(); ++it, int_index++) {
-    const reco::GenParticle& p = *it;
-
-    if (! mDumpAllMCParticles && p.status() != 3)
-      continue;
-
-    pdgId.push_back(p.pdgId());
-    index.push_back(int_index);
-    status.push_back(p.status());
-
-    energy.push_back(p.energy());
-    pt.push_back(p.pt());
-    px.push_back(p.px());
-    py.push_back(p.py());
-    pz.push_back(p.pz());
-    eta.push_back(p.eta());
-    phi.push_back(p.phi());
-
-    std::vector<int> indexes;
-    indexes.reserve(p.numberOfMothers());
-    for (size_t i = 0; i < p.numberOfMothers(); i++) {
-      indexes.push_back(getMotherIndex(genParticles, p.mother(i)));
-    }
-    indexOfMothers.push_back(indexes);
-
-    indexes.clear();
-    indexes.reserve(p.numberOfDaughters());
-    for (size_t i = 0; i < p.numberOfDaughters(); i++) {
-      indexes.push_back(getMotherIndex(genParticles, p.daughter(i)));
-    }
-    indexOfDaughters.push_back(indexes);
-  }
-
-  auto* p_pdgId = &pdgId;
-  auto* p_index = &index;
-  auto* p_status = &status;
-  auto* p_indexOfMothers = &indexOfMothers;
-  auto* p_indexOfDaughters = &indexOfDaughters;
-  auto* p_energy = &energy;
-  auto* p_pt = &pt;
-  auto* p_px = &px;
-  auto* p_py = &py;
-  auto* p_pz = &pz;
-  auto* p_eta = &eta;
-  auto* p_phi = &phi;
-
-  updateBranch(mGenParticlesTree, p_pdgId, "pdg_id");
-  updateBranch(mGenParticlesTree, p_index, "main_index");
-  updateBranch(mGenParticlesTree, p_status, "status");
-  updateBranch(mGenParticlesTree, p_indexOfMothers, "index_of_mothers");
-  updateBranch(mGenParticlesTree, p_indexOfDaughters, "index_of_daughters");
-  
-  updateBranch(mGenParticlesTree, p_energy, "energy");
-  updateBranch(mGenParticlesTree, p_pt, "pt");
-  updateBranch(mGenParticlesTree, p_px, "px");
-  updateBranch(mGenParticlesTree, p_py, "py");
-  updateBranch(mGenParticlesTree, p_pz, "pz");
-  updateBranch(mGenParticlesTree, p_eta, "eta");
-  updateBranch(mGenParticlesTree, p_phi, "phi");
-
-  mGenParticlesTree->Fill();
-  mParticlesIndexes.clear();
-}
-
-int GammaJetFilter::getMotherIndex(const edm::Handle<reco::GenParticleCollection>& genParticles, const reco::Candidate* mother) {
-  const float EPSILON = 0.0001;
-
-  // Look in cache
-  if (mParticlesIndexes.find(mother) != mParticlesIndexes.end())
-    return mParticlesIndexes[mother];
-  
-  int i = 0;
-  for (reco::GenParticleCollection::const_iterator it = genParticles->begin(); it != genParticles->end(); ++it, i++) {  
-    const reco::GenParticle& p = *it;
-
-    if (p.pdgId() != mother->pdgId())
-      continue;
-
-    if (fabs(p.px() - mother->px()) > EPSILON)
-      continue;
-
-    if (fabs(p.py() - mother->py()) > EPSILON)
-      continue;
-
-    if (fabs(p.pz() - mother->pz()) > EPSILON)
-      continue;
-
-    // Cache
-    mParticlesIndexes[mother] = i;
-    return i;
-  }
-
-  return -1;
 }
 
 //define this as a plug-in
