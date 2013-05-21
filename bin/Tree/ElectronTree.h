@@ -1,7 +1,7 @@
 //////////////////////////////////////////////////////////
 // This class has been automatically generated on
-// Wed Mar 28 15:59:31 2012 by ROOT version 5.32/00
-// from TTree misc/misc tree
+// Wed Mar 28 16:00:10 2012 by ROOT version 5.32/00
+// from TTree muons/muons tree
 // found on file: output_mc.root
 //////////////////////////////////////////////////////////
 
@@ -11,57 +11,33 @@
 #include <TChain.h>
 #include <TFile.h>
 
+#include "LeptonTree.h"
+
 // Header file for the classes stored in the TTree if any.
 
 // Fixed size dimensions of array or collections stored in the TTree if any.
 
-class MiscTree {
+class ElectronTree: public LeptonTree {
   public :
-    TTree          *fChain;   //!pointer to the analyzed TTree or TChain
 
     // Declaration of leaf types
-    Double_t        rho;
+    Float_t         isolation[30];   //[n]
 
     // List of branches
-    TBranch        *b_rho;   //!
-
-    MiscTree();
-    virtual ~MiscTree();
-    virtual Int_t    GetEntry(Long64_t entry);
+    TBranch        *b_isolation;   //!
 
     virtual void     Init(TTree *tree);
 };
 
-
-MiscTree::MiscTree() : fChain(0) 
-{
-}
-
-MiscTree::~MiscTree()
-{
-  if (!fChain) return;
-  delete fChain->GetCurrentFile();
-}
-
-Int_t MiscTree::GetEntry(Long64_t entry)
-{
-  // Read contents of entry.
-  if (!fChain)
-    return 0;
-
-  return fChain->GetEntry(entry);
-}
-
-void MiscTree::Init(TTree *tree)
+void ElectronTree::Init(TTree *tree)
 {
   // Set branch addresses and branch pointers
   if (!tree)
     return;
 
-  fChain = tree;
-  fChain->SetMakeClass(1);
+  LeptonTree::Init(tree);
 
-  fChain->SetBranchAddress("rho", &rho, &b_rho);
+  fChain->SetBranchAddress("isolation", &isolation, &b_isolation);
 
   // Enable cache for better read performances
   fChain->SetCacheSize(10000000);

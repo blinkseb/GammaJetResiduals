@@ -2,13 +2,13 @@
 
 #include <TRandom3.h>
 
-#include "Tree/GenParticlesTree.h"
 #include "Tree/AnalysisTree.h"
 #include "Tree/PhotonTree.h"
-#include "Tree/LeptonTree.h"
 #include "Tree/JetTree.h"
 #include "Tree/METTree.h"
 #include "Tree/MiscTree.h"
+#include "Tree/ElectronTree.h"
+#include "Tree/MuonTree.h"
 
 #include "etaBinning.h"
 #include "ptBinning.h"
@@ -154,7 +154,6 @@ class GammaJetFinalizer
     std::string buildPostfix();
 
     // Datas from step 2
-    GenParticlesTree genParticles;
     AnalysisTree analysis;
     PhotonTree photon;
     GenTree genPhoton;

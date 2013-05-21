@@ -87,4 +87,8 @@ void BaseTree::Init(TTree *tree)
   fChain->SetBranchAddress("py", &py, &b_py);
   fChain->SetBranchAddress("pz", &pz, &b_pz);
   fChain->SetBranchAddress("e", &e, NULL);
+  
+  // Enable cache for better read performances
+  fChain->SetCacheSize(10000000);
+  fChain->AddBranchToCache("*");
 }

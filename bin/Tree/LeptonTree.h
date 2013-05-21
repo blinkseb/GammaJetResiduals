@@ -23,7 +23,6 @@ class LeptonTree {
     // Declaration of leaf types
     Int_t           n;
     Int_t           id[30];   //[n]
-    Float_t         isolation[30];   //[n]
     Float_t         pt[30];   //[n]
     Float_t         px[30];   //[n]
     Float_t         py[30];   //[n]
@@ -35,7 +34,6 @@ class LeptonTree {
     // List of branches
     TBranch        *b_n;   //!
     TBranch        *b_id;   //!
-    TBranch        *b_isolation;   //!
     TBranch        *b_pt;   //!
     TBranch        *b_px;   //!
     TBranch        *b_py;   //!
@@ -50,9 +48,6 @@ class LeptonTree {
 
     virtual void     Init(TTree *tree);
 };
-
-typedef LeptonTree ElectronTree;
-typedef LeptonTree MuonTree;
 
 LeptonTree::LeptonTree() : fChain(0) 
 {
@@ -86,7 +81,6 @@ void LeptonTree::Init(TTree *tree)
 
   fChain->SetBranchAddress("n", &n, &b_n);
   fChain->SetBranchAddress("id", &id, &b_id);
-  fChain->SetBranchAddress("isolation", &isolation, &b_isolation);
   fChain->SetBranchAddress("pt", &pt, &b_pt);
   fChain->SetBranchAddress("px", &px, &b_px);
   fChain->SetBranchAddress("py", &py, &b_py);
@@ -94,4 +88,8 @@ void LeptonTree::Init(TTree *tree)
   fChain->SetBranchAddress("eta", &eta, &b_eta);
   fChain->SetBranchAddress("phi", &phi, &b_phi);
   fChain->SetBranchAddress("charge", &charge, &b_charge);
+
+  // Enable cache for better read performances
+  fChain->SetCacheSize(10000000);
+  fChain->AddBranchToCache("*");
 }

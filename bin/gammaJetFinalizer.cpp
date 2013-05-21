@@ -127,9 +127,9 @@ void GammaJetFinalizer::runAnalysis() {
 
   const std::string postFix = buildPostfix();
 
-#if ADD_TREES
-  TChain genParticlesChain("gammaJet/gen_particles");
-#endif
+  // Set max TTree size
+  TTree::SetMaxTreeSize(429496729600LL);
+
   TChain analysisChain("gammaJet/analysis");
   TChain photonChain("gammaJet/photon");
   TChain genPhotonChain("gammaJet/photon_gen");
@@ -160,10 +160,6 @@ void GammaJetFinalizer::runAnalysis() {
   treeName = TString::Format("gammaJet/%s/misc", postFix.c_str());
   TChain miscChain(treeName);
 
-#if ADD_TREES
-  if (mIsMC)
-    loadFiles(genParticlesChain);
-#endif
   loadFiles(analysisChain);
   loadFiles(photonChain);
   loadFiles(genPhotonChain);
@@ -183,11 +179,6 @@ void GammaJetFinalizer::runAnalysis() {
   loadFiles(rawMetChain);
 
   loadFiles(miscChain);
-
-#if ADD_TREES
-  if (mIsMC)
-    genParticles.Init(&genParticlesChain);
-#endif
 
   analysis.Init(&analysisChain);
   photon.Init(&photonChain);
@@ -237,10 +228,6 @@ void GammaJetFinalizer::runAnalysis() {
   fwlite::TFileService fs(outputFile);
 
 #if ADD_TREES
-  TTree* genParticlesTree = NULL;
-  if (mIsMC)
-    cloneTree(genParticles.fChain, genParticlesTree);
-
   TTree* photonTree = NULL;
   cloneTree(photon.fChain, photonTree);
 
@@ -510,11 +497,6 @@ void GammaJetFinalizer::runAnalysis() {
       break;
     }
 
-#if ADD_TREES
-    if (mIsMC)
-      genParticles.GetEntry(i);
-#endif
-
     analysis.GetEntry(i);
     photon.GetEntry(i);
     genPhoton.GetEntry(i);
@@ -637,8 +619,6 @@ void GammaJetFinalizer::runAnalysis() {
 
 #if ADD_TREES
     if (mUncutTrees) {
-      if (genParticlesTree)
-        genParticlesTree->Fill();
       photonTree->Fill();
       genPhotonTree->Fill();
       firstJetTree->Fill();
@@ -975,8 +955,6 @@ void GammaJetFinalizer::runAnalysis() {
 
 #if ADD_TREES
       if (! mUncutTrees) {
-        if (genParticlesTree)
-          genParticlesTree->Fill();
         photonTree->Fill();
         genPhotonTree->Fill();
         firstJetTree->Fill();
@@ -997,6 +975,7 @@ void GammaJetFinalizer::runAnalysis() {
       passedEvents++;
     }
   }
+
   std::cout << "Selection efficiency: " << MAKE_RED << (double) passedEvents / (to - from) * 100 << "%" << RESET_COLOR << std::endl;
   std::cout << "Efficiency for photon/jet cut: " << MAKE_RED << (double) passedPhotonJetCut / (to - from) * 100 << "%" << RESET_COLOR << std::endl;
   std::cout << "Selection efficiency for trigger selection: " << MAKE_RED << (double) passedEventsFromTriggers / (to - from) * 100 << "%" << RESET_COLOR << std::endl;
