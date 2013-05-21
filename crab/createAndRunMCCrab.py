@@ -60,8 +60,8 @@ for dataset_path, dataset_name in datasets.items():
     cmd = "crab -submit 1-500 -c %s" % (ui_working_dir)
     os.system(cmd)
 
-    cmd = "crab -submit 500-1000 -c %s" % (ui_working_dir)
+    cmd = "crab -submit 501-1000 -c %s" % (ui_working_dir)
     os.system(cmd)
 
-    cmd = "crab -submit 1000-1500 -c %s" % (ui_working_dir)
+    cmd = "crab -submit 1001-1500 -c %s" % (ui_working_dir)
     os.system(cmd)
