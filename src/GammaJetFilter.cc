@@ -1302,7 +1302,7 @@ void GammaJetFilter::photonToTree(const pat::PhotonRef& photon, const edm::Event
 }
 
 void GammaJetFilter::jetsToTree(const pat::Jet* firstJet, const pat::Jet* secondJet, const std::vector<TTree*>& trees) {
-  jetToTree(firstJet, true, trees[0], trees[4]);
+  jetToTree(firstJet, mIsMC, trees[0], trees[4]);
   jetToTree(secondJet, false, trees[1], trees[5]);
 
   // Raw jets
@@ -1342,8 +1342,10 @@ void GammaJetFilter::jetToTree(const pat::Jet* jet, bool _findNeutrinos, TTree* 
   std::vector<boost::shared_ptr<void> > addresses;
   particleToTree(jet, tree, addresses);
 
-  mNeutrinos->Clear("C");
-  mNeutrinosPDG->Clear("C");
+  if (mIsMC) {
+    mNeutrinos->Clear("C");
+    mNeutrinosPDG->Clear("C");
+  }
 
   if (jet) {
     float area = jet->jetArea();

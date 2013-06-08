@@ -5,6 +5,7 @@
 #include "Tree/AnalysisTree.h"
 #include "Tree/PhotonTree.h"
 #include "Tree/JetTree.h"
+#include "Tree/GenJetTree.h"
 #include "Tree/METTree.h"
 #include "Tree/MiscTree.h"
 #include "Tree/ElectronTree.h"
@@ -125,8 +126,6 @@ class GammaJetFinalizer
     void checkInputFiles();
     void loadFiles(TChain& chain);
 
-    void doSecondJetExtrapolation();
-
     //bool passTrigger(const TRegexp& regexp) const;
     int checkTrigger(std::string& passedTrigger, float& weight);
 
@@ -137,6 +136,8 @@ class GammaJetFinalizer
       std::vector<std::vector<T*> > buildEtaPtVector(TFileDirectory dir, const std::string& branchName, int nBins, double xMin, double xMax);
     template<typename T>
       std::vector<T*> buildPtVector(TFileDirectory dir, const std::string& branchName, const std::string& etaName, int nBins, double xMin, double xMax);
+    template<typename T>
+      std::vector<T*> buildPtVector(TFileDirectory dir, const std::string& branchName, int nBins, double xMin, double xMax);
     template<typename T>
       std::vector<std::vector<T*> > buildEtaVertexVector(TFileDirectory dir, const std::string& branchName, int nBins, double xMin, double xMax);
     template<typename T>
@@ -162,11 +163,11 @@ class GammaJetFinalizer
 
     JetTree firstJet;
     JetTree firstRawJet;
-    GenTree firstGenJet;
+    GenJetTree firstGenJet;
 
     JetTree secondJet;
     JetTree secondRawJet;
-    GenTree secondGenJet;
+    GenJetTree secondGenJet;
 
     METTree MET;
     GenTree genMET;

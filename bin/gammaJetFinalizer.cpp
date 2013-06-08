@@ -162,33 +162,35 @@ void GammaJetFinalizer::runAnalysis() {
 
   loadFiles(analysisChain);
   loadFiles(photonChain);
-  loadFiles(genPhotonChain);
+  if (mIsMC)
+    loadFiles(genPhotonChain);
   loadFiles(muonsChain);
   loadFiles(electronsChain);
 
   loadFiles(firstJetChain);
   loadFiles(firstRawJetChain);
-  loadFiles(firstGenJetChain);
+  if (mIsMC)
+    loadFiles(firstGenJetChain);
 
   loadFiles(secondJetChain);
-  loadFiles(secondGenJetChain);
+  if (mIsMC)
+    loadFiles(secondGenJetChain);
   loadFiles(secondRawJetChain);
 
   loadFiles(metChain);
-  loadFiles(genMetChain);
+  if (mIsMC)
+    loadFiles(genMetChain);
   loadFiles(rawMetChain);
 
   loadFiles(miscChain);
 
   analysis.Init(&analysisChain);
   photon.Init(&photonChain);
-  genPhoton.Init(&genPhotonChain);
   muons.Init(&muonsChain);
   electrons.Init(&electronsChain);
 
   firstJet.Init(&firstJetChain);
   firstRawJet.Init(&firstRawJetChain);
-  firstGenJet.Init(&firstGenJetChain);
 
 #if !ADD_TREES
   firstJet.DisableUnrelatedBranches();
@@ -197,7 +199,6 @@ void GammaJetFinalizer::runAnalysis() {
 
   secondJet.Init(&secondJetChain);
   secondRawJet.Init(&secondRawJetChain);
-  secondGenJet.Init(&secondGenJetChain);
 
 #if !ADD_TREES
   secondJet.DisableUnrelatedBranches();
@@ -205,8 +206,14 @@ void GammaJetFinalizer::runAnalysis() {
 #endif
 
   MET.Init(&metChain);
-  genMET.Init(&genMetChain);
   rawMET.Init(&rawMetChain);
+
+  if (mIsMC) {
+    genPhoton.Init(&genPhotonChain);
+    genMET.Init(&genMetChain);
+    secondGenJet.Init(&secondGenJetChain);
+    firstGenJet.Init(&firstGenJetChain);
+  }
 
   misc.Init(&miscChain);
 
@@ -232,13 +239,15 @@ void GammaJetFinalizer::runAnalysis() {
   cloneTree(photon.fChain, photonTree);
 
   TTree* genPhotonTree = NULL;
-  cloneTree(genPhoton.fChain, genPhotonTree);
+  if (mIsMC)
+    cloneTree(genPhoton.fChain, genPhotonTree);
 
   TTree* firstJetTree = NULL;
   cloneTree(firstJet.fChain, firstJetTree);
 
   TTree* firstGenJetTree = NULL;
-  cloneTree(firstGenJet.fChain, firstGenJetTree);
+  if (mIsMC)
+    cloneTree(firstGenJet.fChain, firstGenJetTree);
 
   TTree* firstRawJetTree = NULL;
   cloneTree(firstRawJet.fChain, firstRawJetTree);
@@ -247,7 +256,8 @@ void GammaJetFinalizer::runAnalysis() {
   cloneTree(secondJet.fChain, secondJetTree);
 
   TTree* secondGenJetTree = NULL;
-  cloneTree(secondGenJet.fChain, secondGenJetTree);
+  if (mIsMC)
+    cloneTree(secondGenJet.fChain, secondGenJetTree);
 
   TTree* secondRawJetTree = NULL;
   cloneTree(secondRawJet.fChain, secondRawJetTree);
@@ -259,7 +269,8 @@ void GammaJetFinalizer::runAnalysis() {
   cloneTree(rawMET.fChain, rawMetTree);
 
   TTree* genMetTree = NULL;
-  cloneTree(genMET.fChain, genMetTree);
+  if (mIsMC)
+    cloneTree(genMET.fChain, genMetTree);
 
   TTree* muonsTree = NULL;
   cloneTree(muons.fChain, muonsTree);
@@ -312,6 +323,8 @@ void GammaJetFinalizer::runAnalysis() {
   TH1F* h_MET = analysisDir.make<TH1F>("MET", "MET", 150, 0., 300.);
   TH1F* h_alpha = analysisDir.make<TH1F>("alpha", "alpha", 100, 0., 2.);
 
+  std::vector<TH1F*> h_ptPhotonBinned = buildPtVector<TH1F>(analysisDir, "ptPhoton", 100, -1, -1);
+
   TH1F* h_rho = analysisDir.make<TH1F>("rho", "rho", 100, 0, 50);
   TH1F* h_hadTowOverEm = analysisDir.make<TH1F>("hadTowOverEm", "hadTowOverEm", 100, 0, 0.05);
   TH1F* h_sigmaIetaIeta = analysisDir.make<TH1F>("sigmaIetaIeta", "sigmaIetaIeta", 100, 0, 0.011);
@@ -326,6 +339,8 @@ void GammaJetFinalizer::runAnalysis() {
   TH1F* h_MET_passedID = analysisDir.make<TH1F>("MET_passedID", "MET", 150, 0., 300.);
   TH1F* h_rawMET_passedID = analysisDir.make<TH1F>("rawMET_passedID", "raw MET", 150, 0., 300.);
   TH1F* h_alpha_passedID = analysisDir.make<TH1F>("alpha_passedID", "alpha", 100, 0., 2.);
+
+  std::vector<TH1F*> h_ptPhotonBinned_passedID = buildPtVector<TH1F>(analysisDir, "ptPhoton_passedID", 100, -1, -1);
 
   TH1F* h_rho_passedID = analysisDir.make<TH1F>("rho_passedID", "rho", 100, 0, 50);
   TH1F* h_hadTowOverEm_passedID = analysisDir.make<TH1F>("hadTowOverEm_passedID", "hadTowOverEm", 100, 0, 0.05);
@@ -499,20 +514,24 @@ void GammaJetFinalizer::runAnalysis() {
 
     analysis.GetEntry(i);
     photon.GetEntry(i);
-    genPhoton.GetEntry(i);
+    if (mIsMC)
+      genPhoton.GetEntry(i);
     muons.GetEntry(i);
     electrons.GetEntry(i);
 
     firstJet.GetEntry(i);
     firstRawJet.GetEntry(i);
-    firstGenJet.GetEntry(i);
+    if (mIsMC)
+      firstGenJet.GetEntry(i);
 
     secondJet.GetEntry(i);
     secondRawJet.GetEntry(i);
-    secondGenJet.GetEntry(i);
+    if (mIsMC)
+      secondGenJet.GetEntry(i);
 
     MET.GetEntry(i);
-    genMET.GetEntry(i);
+    if (mIsMC)
+      genMET.GetEntry(i);
     rawMET.GetEntry(i);
 
     misc.GetEntry(i);
@@ -620,16 +639,20 @@ void GammaJetFinalizer::runAnalysis() {
 #if ADD_TREES
     if (mUncutTrees) {
       photonTree->Fill();
-      genPhotonTree->Fill();
+      if (mIsMC)
+        genPhotonTree->Fill();
       firstJetTree->Fill();
-      firstGenJetTree->Fill();
+      if (mIsMC)
+        firstGenJetTree->Fill();
       firstRawJetTree->Fill();
       secondJetTree->Fill();
-      secondGenJetTree->Fill();
+      if (mIsMC)
+        secondGenJetTree->Fill();
       secondRawJetTree->Fill();
       metTree->Fill();
       rawMetTree->Fill();
-      genMetTree->Fill();
+      if (mIsMC)
+        genMetTree->Fill();
       electronsTree->Fill();
       muonsTree->Fill();
       analysisTree->Fill();
@@ -751,6 +774,9 @@ void GammaJetFinalizer::runAnalysis() {
       //std::cout << "Photon pt " << photon.pt() << " is not covered by our pt binning. Dumping event." << std::endl;
       continue;
     }
+
+    h_ptPhotonBinned[ptBin]->Fill(photon.pt, eventWeight);
+
     int ptBinGen = mPtBinning.getPtBin(genPhoton.pt);
 
     int etaBin = mEtaBinning.getBin(firstJet.eta);
@@ -882,6 +908,8 @@ void GammaJetFinalizer::runAnalysis() {
         h_rawMET_passedID->Fill(rawMET.et, eventWeight);
         h_alpha_passedID->Fill(secondJet.pt / photon.pt, eventWeight);
 
+        h_ptPhotonBinned_passedID[ptBin]->Fill(photon.pt, eventWeight);
+
         h_METvsfirstJet->Fill(MET.et, firstJet.pt, eventWeight);
         h_firstJetvsSecondJet->Fill(firstJet.pt, secondJet.pt, eventWeight);
 
@@ -956,16 +984,20 @@ void GammaJetFinalizer::runAnalysis() {
 #if ADD_TREES
       if (! mUncutTrees) {
         photonTree->Fill();
-        genPhotonTree->Fill();
+        if (mIsMC)
+          genPhotonTree->Fill();
         firstJetTree->Fill();
-        firstGenJetTree->Fill();
+        if (mIsMC)
+          firstGenJetTree->Fill();
         firstRawJetTree->Fill();
         secondJetTree->Fill();
-        secondGenJetTree->Fill();
+        if (mIsMC)
+          secondGenJetTree->Fill();
         secondRawJetTree->Fill();
         metTree->Fill();
         rawMetTree->Fill();
-        genMetTree->Fill();
+        if (mIsMC)
+          genMetTree->Fill();
         electronsTree->Fill();
         muonsTree->Fill();
         analysisTree->Fill();
@@ -990,28 +1022,39 @@ void GammaJetFinalizer::runAnalysis() {
   std::cout << "Rejected events because trigger was found but pT was out of range: " << MAKE_RED << (double) rejectedEventsPtOut / (rejectedEventsFromTriggers) * 100 << "%" << RESET_COLOR << std::endl;
 }
 
-void GammaJetFinalizer::doSecondJetExtrapolation() {
-
-  // TODO: Extrapolation
-
-}
-
 template<typename T>
-std::vector<T*> GammaJetFinalizer::buildPtVector(TFileDirectory dir, const std::string& branchName, const std::string& etaName, int nBins, double xMin, double xMax) {
+std::vector<T*> GammaJetFinalizer::buildPtVector(TFileDirectory dir, const std::string& branchName, int nBins, double xMin, double xMax) {
 
+  bool appendText = (xMin >= 0 && xMax >= 0);
   std::vector<T*> vector;
   size_t ptBinningSize = mPtBinning.size();
   for (size_t j = 0; j < ptBinningSize; j++) {
 
     const std::pair<float, float> bin = mPtBinning.getBinValue(j);
     std::stringstream ss;
-    ss << branchName << "_" << etaName << "_ptPhot_" << (int) bin.first << "_" << (int) bin.second;
+    if (appendText)
+      ss << branchName << "_ptPhot_" << (int) bin.first << "_" << (int) bin.second;
+    else
+      ss << branchName << "_" << (int) bin.first << "_" << (int) bin.second;
+
+    if (!appendText) {
+      xMin = bin.first;
+    }
+
+    if (!appendText) {
+      xMax = bin.second;
+    }
 
     T* object = dir.make<T>(ss.str().c_str(), ss.str().c_str(), nBins, xMin, xMax);
     vector.push_back(object);
   }
 
   return vector;
+}
+
+template<typename T>
+std::vector<T*> GammaJetFinalizer::buildPtVector(TFileDirectory dir, const std::string& branchName, const std::string& etaName, int nBins, double xMin, double xMax) {
+  return buildPtVector<T>(dir, branchName + "_" + etaName, nBins, xMin, xMax);
 }
 
 template<typename T>
