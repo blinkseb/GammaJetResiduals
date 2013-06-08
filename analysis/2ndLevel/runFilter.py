@@ -21,6 +21,10 @@ process.ak5PFchsL1FastL2L3 = cms.ESProducer(
     'JetCorrectionESChain',
     correctors = cms.vstring('ak5PFchsL1Fastjet', 'ak5PFchsL2Relative','ak5PFchsL3Absolute')
     )
+process.ak5PFchsL1FastL2L3Residual = cms.ESProducer(
+    'JetCorrectionESChain',
+    correctors = cms.vstring('ak5PFchsL1Fastjet', 'ak5PFchsL2Relative','ak5PFchsL3Absolute','ak5PFchsResidual')
+    )
 
 process.maxEvents = cms.untracked.PSet( input = cms.untracked.int32(10000) )
 
@@ -76,8 +80,8 @@ process.gammaJet = cms.EDFilter('GammaJetFilter',
     # JEC
     doJetCorrection = cms.untracked.bool(False),
     correctJecFromRaw = cms.untracked.bool(True),
-    correctorLabel = cms.untracked.string("ak5PFchsL1FastL2L3"),
-    #correctorLabel = cms.untracked.string("ak5PFResidual")
+    #correctorLabel = cms.untracked.string("ak5PFchsL1FastL2L3"),
+    correctorLabel = cms.untracked.string("ak5PFchsL1FastL2L3Residual"),
 
     # MET
     redoTypeIMETCorrection = cms.untracked.bool(True)
