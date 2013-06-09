@@ -201,7 +201,7 @@ drawBase::drawBase(const std::string& analysisType, const std::string& recoType,
   legendTitle_ = "";
   legendTextSize_ = 0.038;
 
-  poissonAsymmErrors_ = true;
+  poissonAsymmErrors_ = false;
 
   pdf_aussi_ = false;
   noStack_ = false;
@@ -1516,6 +1516,7 @@ void drawBase::drawHisto_fromHistos(std::vector<TH1*> dataHistos, std::vector<TH
   } // if !nomc
   for (unsigned i = 0; i < dataHistos.size(); ++i) {
     if (dataHistos.size() == 1 && poissonAsymmErrors_) {
+      std::cout << "drawing poisson" << std::endl;
       graph_data_poisson->Draw("P same");
       //xframe->Draw("same");
     } else {
@@ -1523,7 +1524,7 @@ void drawBase::drawHisto_fromHistos(std::vector<TH1*> dataHistos, std::vector<TH
       if (dataFiles_[backwardsIndex].fillStyle != -1) {
         dataHistos[backwardsIndex]->Draw("h same");
       } else {
-        dataHistos[backwardsIndex]->Draw("e same");
+        dataHistos[backwardsIndex]->Draw("P e same");
       }
     }
     //if( dataFiles_[i].fillStyle!=-1 )

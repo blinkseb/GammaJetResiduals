@@ -254,7 +254,8 @@ void drawGraphs(TGraphErrors* data, TGraphErrors* mc, double xMin, double xMax, 
   TPaveText* fitlabel = new TPaveText(0.43, 0.77, 0.78, 0.81, "brNDC");
   fitlabel->SetTextSize(0.08);
   fitlabel->SetFillColor(0);
-  TString fitLabelText = TString::Format("#font[42]{Fit: %.4f #pm %.4f + (%.2e #pm %.2e)x}", fitValue, fitError, ratioFit->GetParameter(1), ratioFit->GetParError(1));
+  //TString fitLabelText = TString::Format("#font[42]{Fit: %.4f #pm %.4f + (%.2e #pm %.2e)x}", fitValue, fitError, ratioFit->GetParameter(1), ratioFit->GetParError(1));
+  TString fitLabelText = TString::Format("#font[42]{Fit: %.4f #pm %.4f}", fitValue, fitError);
   fitlabel->AddText(fitLabelText);
 
   /*
