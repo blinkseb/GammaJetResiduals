@@ -303,7 +303,12 @@ GammaJetFilter::GammaJetFilter(const edm::ParameterSet& iConfig):
 
   edm::Service<TFileService> fs;
   mPhotonTree = fs->make<TTree>("photon", "photon tree");
-  mPhotonGenTree = fs->make<TTree>("photon_gen", "photon gen tree");
+  
+  if (mIsMC)
+    mPhotonGenTree = fs->make<TTree>("photon_gen", "photon gen tree");
+  else
+    mPhotonGenTree = nullptr;
+
   mAnalysisTree = fs->make<TTree>("analysis", "analysis tree");
   mMuonsTree = fs->make<TTree>("muons", "muons tree");
   mElectronsTree = fs->make<TTree>("electrons", "electrons tree");
@@ -425,14 +430,23 @@ void GammaJetFilter::createTrees(const std::string& rootName, TFileService& fs) 
   trees.push_back(dir.make<TTree>("first_jet_raw", "first raw jet tree"));
   trees.push_back(dir.make<TTree>("second_jet_raw", "second raw jet tree"));
 
-  trees.push_back(dir.make<TTree>("first_jet_gen", "first gen jet tree"));
-  trees.push_back(dir.make<TTree>("second_jet_gen", "second gen jet tree"));
+  if (mIsMC) {
+    trees.push_back(dir.make<TTree>("first_jet_gen", "first gen jet tree"));
+    trees.push_back(dir.make<TTree>("second_jet_gen", "second gen jet tree"));
+  } else {
+    trees.push_back(nullptr);
+    trees.push_back(nullptr);
+  }
 
   // MET
   std::vector<TTree*>& met = mMETTrees[rootName];
   met.push_back(dir.make<TTree>("met", "met tree"));
   met.push_back(dir.make<TTree>("met_raw", "met raw tree"));
-  met.push_back(dir.make<TTree>("met_gen", "met gen tree"));
+
+  if (mIsMC)
+    met.push_back(dir.make<TTree>("met_gen", "met gen tree"));
+  else
+    met.push_back(nullptr);
 
   // Misc
   mMiscTrees[rootName] = dir.make<TTree>("misc", "misc tree");
@@ -568,6 +582,7 @@ bool GammaJetFilter::filter(edm::Event& iEvent, const edm::EventSetup& iSetup)
     edm::Handle<edm::ValueMap<float>>  qgTagHandleLikelihood;
     iEvent.getByLabel("QGTagger" + *it,"qgMLP", qgTagHandleMLP);
     iEvent.getByLabel("QGTagger" + *it,"qgLikelihood", qgTagHandleLikelihood);
+
 
     processJets(photon, jets, infos.algo, qgTagHandleMLP, qgTagHandleLikelihood, jetsHandle, mJetTrees[*it]);
 
@@ -980,7 +995,7 @@ bool GammaJetFilter::isValidJet(const pat::Jet& jet) {
     // so there's *NO* need to use an uncorrected jet
     bool isValid = jet.neutralHadronEnergyFraction() < 0.99;
     isValid &= jet.neutralEmEnergyFraction() < 0.99;
-    isValid &= jet.getPFConstituents().size() > 1;
+    //isValid &= jet.getPFConstituents().size() > 1;
     if (fabs(jet.eta()) < 2.4) {
       isValid &= jet.chargedHadronEnergyFraction() > 0.;
       isValid &= jet.chargedMultiplicity() > 0;
@@ -1297,8 +1312,10 @@ void GammaJetFilter::photonToTree(const pat::PhotonRef& photon, const edm::Event
 
   mPhotonTree->Fill();
 
-  particleToTree(photon->genPhoton(), mPhotonGenTree, addresses);
-  mPhotonGenTree->Fill();
+  if (mIsMC) {
+    particleToTree(photon->genPhoton(), mPhotonGenTree, addresses);
+    mPhotonGenTree->Fill();
+  }
 }
 
 void GammaJetFilter::jetsToTree(const pat::Jet* firstJet, const pat::Jet* secondJet, const std::vector<TTree*>& trees) {
