@@ -12,6 +12,7 @@
 #include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <chrono>
 
 #include <boost/algorithm/string.hpp>
 #include <boost/filesystem.hpp>
@@ -44,6 +45,7 @@
 #define MAKE_BLUE "\033[34m"
 
 #define ADD_TREES true
+#define PROFILE false
 
 #define DELTAPHI_CUT (2.8)
 
@@ -91,6 +93,8 @@ void GammaJetFinalizer::cloneTree(TTree* from, TTree*& to) {
 }
 
 void GammaJetFinalizer::runAnalysis() {
+
+  typedef std::chrono::high_resolution_clock clock;
   
   if (mIsMC) {
     mMCTriggers = new MCTriggers("triggers_mc.xml");
@@ -281,6 +285,10 @@ void GammaJetFinalizer::runAnalysis() {
   TTree* analysisTree = NULL;
   cloneTree(analysis.fChain, analysisTree);
   analysisTree->SetName("misc");
+
+  TTree *miscTree = NULL;
+  cloneTree(miscChain.fChain, miscTree);
+  miscTree->SetName("rho");
 #endif
 
   FactorizedJetCorrector* jetCorrector = NULL;
@@ -502,15 +510,30 @@ void GammaJetFinalizer::runAnalysis() {
     std::cout << "Batch mode: running from " << from << " (included) to " << to << " (excluded)" << std::endl;
   }
 
+  clock::time_point start = clock::now();
+
+#if PROFILE
+  std::chrono::milliseconds t0; 
+  std::chrono::microseconds t1; 
+  std::chrono::microseconds t2;
+#endif
+
   for (uint64_t i = from; i < to; i++) {
 
     if ((i - from) % 50000 == 0) {
-      std::cout << "Processing event #" << (i - from + 1) << " of " << (to - from) << " (" << (float) (i - from) / (to - from) * 100 << "%)" << std::endl;
+      clock::time_point end = clock::now();
+      double elapsedTime = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+      start = end;
+      std::cout << "Processing event #" << (i - from + 1) << " of " << (to - from) << " (" << (float) (i - from) / (to - from) * 100 << "%) - " << elapsedTime << " ms" << std::endl;
     }
 
     if (EXIT) {
       break;
     }
+
+#if PROFILE
+    auto fooA = clock::now();
+#endif
 
     analysis.GetEntry(i);
     photon.GetEntry(i);
@@ -535,6 +558,17 @@ void GammaJetFinalizer::runAnalysis() {
     rawMET.GetEntry(i);
 
     misc.GetEntry(i);
+
+#if PROFILE
+    auto fooB = clock::now();
+
+    t0 += std::chrono::duration_cast<std::chrono::milliseconds>(fooB - fooA);
+
+    if ((i - from) % 50000 == 0) {
+      std::cout << "GetEntry() : " << std::chrono::duration_cast<std::chrono::milliseconds>(t0).count() << "ms" << std::endl;
+      t0 = std::chrono::milliseconds::zero();
+    }
+#endif
 
     if (! photon.is_present || ! firstJet.is_present)
       continue;
@@ -570,6 +604,10 @@ void GammaJetFinalizer::runAnalysis() {
       secondJet.pt = secondRawJet.pt * correction;
     }
 
+#if PROFILE
+    fooA = clock::now();
+#endif
+
     int checkTriggerResult = 0;
     std::string passedTrigger;
     float triggerWeight = 1.;
@@ -577,7 +615,7 @@ void GammaJetFinalizer::runAnalysis() {
       switch (checkTriggerResult) {
         case TRIGGER_NOT_FOUND:
           if (mVerbose) {
-            std::cout << MAKE_RED << "[Run #" << analysis.run << "] Event does not pass required trigger. List of passed triggers: " << RESET_COLOR << std::endl;
+            std::cout << MAKE_RED << "[Run #" << analysis.run << ", pT: " << photon.pt << "] Event does not pass required trigger. List of passed triggers: " << RESET_COLOR << std::endl;
             size_t size = analysis.trigger_names->size();
             for (size_t i = 0; i < size; i++) {
               if (analysis.trigger_results->at(i)) {
@@ -619,12 +657,24 @@ void GammaJetFinalizer::runAnalysis() {
     //  continue;
     
     if (mIsMC) {
-      passedTrigger = cleanTriggerName(passedTrigger);
+      cleanTriggerName(passedTrigger);
       computePUWeight(passedTrigger);
       triggerWeight = 1.;
     } else {
       triggerWeight = 1. / triggerWeight;
     }
+
+#if PROFILE
+    fooB = clock::now();
+
+    t1 += std::chrono::duration_cast<std::chrono::microseconds>(fooB - fooA);
+
+    if ((i - from) % 50000 == 0) {
+      std::cout << "Trigger + PU : " << t1.count() / 1000. << " ms" << std::endl;
+      t1 = std::chrono::microseconds::zero();
+    }
+#endif
+
 
     double generatorWeight = (mIsMC) ? analysis.generator_weight : 1.;
     if (generatorWeight == 0.)
@@ -634,6 +684,10 @@ void GammaJetFinalizer::runAnalysis() {
 #if ADD_TREES
     double oldAnalysisWeight = analysis.event_weight;
     analysis.event_weight = eventWeight;
+#endif
+
+#if PROFILE
+    fooA = clock::now();
 #endif
 
 #if ADD_TREES
@@ -656,6 +710,7 @@ void GammaJetFinalizer::runAnalysis() {
       electronsTree->Fill();
       muonsTree->Fill();
       analysisTree->Fill();
+      miscTree->Fill();
     }
 #endif
 
@@ -1001,11 +1056,24 @@ void GammaJetFinalizer::runAnalysis() {
         electronsTree->Fill();
         muonsTree->Fill();
         analysisTree->Fill();
+        miscTree->Fill();
       }
 #endif
 
       passedEvents++;
     }
+
+#if PROFILE
+    fooB = clock::now();
+
+    t2 += std::chrono::duration_cast<std::chrono::microseconds>(fooB - fooA);
+
+    if ((i - from) % 50000 == 0) {
+      std::cout << "Remaining : " << t2.count() / 1000. << " ms" << std::endl;
+      t2 = std::chrono::microseconds::zero();
+    }
+#endif
+
   }
 
   std::cout << "Selection efficiency: " << MAKE_RED << (double) passedEvents / (to - from) * 100 << "%" << RESET_COLOR << std::endl;
@@ -1174,9 +1242,9 @@ std::vector<std::shared_ptr<GaussianProfile>> GammaJetFinalizer::buildNewExtrapo
   return etaBinning;
 }
 
-std::string GammaJetFinalizer::cleanTriggerName(const std::string& trigger) {
-  static boost::regex r(R"(_\.\*|\.\*)");
-  return boost::regex_replace(trigger, r, "");
+void GammaJetFinalizer::cleanTriggerName(std::string& trigger) {
+  boost::replace_first(trigger, "_.*", "");
+  boost::replace_first(trigger, ".*", "");
 }
 
 void GammaJetFinalizer::computePUWeight(const std::string& passedTrigger) {
@@ -1189,7 +1257,9 @@ void GammaJetFinalizer::computePUWeight(const std::string& passedTrigger) {
   if (mNoPUReweighting)
     return;
 
-  if (! mLumiReweighting.count(passedTrigger)) {
+  boost::shared_ptr<PUReweighter> reweighter = mLumiReweighting[passedTrigger];
+
+  if (! reweighter.get()) {
 
     /*if (! boost::filesystem::exists(puMC)) {
       std::cout << "Warning: " << MAKE_RED << "pileup histogram for MC was not found. No PU reweighting." << RESET_COLOR << std::endl;
@@ -1199,12 +1269,13 @@ void GammaJetFinalizer::computePUWeight(const std::string& passedTrigger) {
       return;
     } else {*/
       std::cout << MAKE_BLUE << "Create PU reweighting profile for " << passedTrigger << RESET_COLOR << std::endl;
-      mLumiReweighting[passedTrigger] = boost::shared_ptr<PUReweighter>(new PUReweighter(puData/*, puMC*/));
+      reweighter = boost::shared_ptr<PUReweighter>(new PUReweighter(puData/*, puMC*/));
+      mLumiReweighting[passedTrigger] = reweighter;
     /*}*/
 
   }
 
-  mPUWeight = mLumiReweighting[passedTrigger]->weight(analysis.ntrue_interactions);
+  mPUWeight = reweighter->weight(analysis.ntrue_interactions);
 }
 
 void GammaJetFinalizer::checkInputFiles() {

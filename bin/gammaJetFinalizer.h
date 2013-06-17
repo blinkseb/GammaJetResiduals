@@ -21,6 +21,7 @@
 
 #include <vector>
 #include <memory>
+#include <unordered_map>
 
 namespace fwlite {
   class TFileService;
@@ -129,7 +130,7 @@ class GammaJetFinalizer
     //bool passTrigger(const TRegexp& regexp) const;
     int checkTrigger(std::string& passedTrigger, float& weight);
 
-    std::string cleanTriggerName(const std::string& trigger);
+    void cleanTriggerName(std::string& trigger);
     void computePUWeight(const std::string& passedTrigger);
 
     template<typename T>
@@ -198,7 +199,7 @@ class GammaJetFinalizer
     bool   mVerbose;
     bool   mUncutTrees;
 
-    std::map<std::string, boost::shared_ptr<PUReweighter>> mLumiReweighting;
+    std::unordered_map<std::string, boost::shared_ptr<PUReweighter>> mLumiReweighting;
     float mPUWeight;
 
     float respMPF;
