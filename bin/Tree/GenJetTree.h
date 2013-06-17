@@ -67,6 +67,5 @@ void GenJetTree::Init(TTree *tree)
   fChain->SetBranchAddress("parton_flavour", &parton_flavour, NULL);
   
   // Enable cache for better read performances
-  fChain->SetCacheSize(10000000);
-  fChain->AddBranchToCache("*");
+  BaseTree::InitCache();
 }

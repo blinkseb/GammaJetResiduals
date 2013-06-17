@@ -47,6 +47,7 @@ class LeptonTree {
     virtual Int_t    GetEntry(Long64_t entry);
 
     virtual void     Init(TTree *tree);
+    virtual void     InitCache();
 };
 
 LeptonTree::LeptonTree() : fChain(0) 
@@ -88,8 +89,9 @@ void LeptonTree::Init(TTree *tree)
   fChain->SetBranchAddress("eta", &eta, &b_eta);
   fChain->SetBranchAddress("phi", &phi, &b_phi);
   fChain->SetBranchAddress("charge", &charge, &b_charge);
+}
 
-  // Enable cache for better read performances
-  fChain->SetCacheSize(10000000);
-  fChain->AddBranchToCache("*");
+void LeptonTree::InitCache() {
+  //fChain->SetCacheSize(-1);
+  //fChain->AddBranchToCache("*");
 }

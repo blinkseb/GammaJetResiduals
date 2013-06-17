@@ -49,7 +49,5 @@ void PhotonTree::Init(TTree *tree)
   fChain->SetBranchAddress("neutralHadronsIsolation", &neutralHadronsIsolation, NULL);
   fChain->SetBranchAddress("photonIsolation", &photonIsolation, NULL);
 
-  // Enable cache for better read performances
-  fChain->SetCacheSize(10000000);
-  fChain->AddBranchToCache("*");
+  BaseTree::InitCache();
 }

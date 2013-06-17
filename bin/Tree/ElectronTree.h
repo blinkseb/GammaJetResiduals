@@ -39,7 +39,5 @@ void ElectronTree::Init(TTree *tree)
 
   fChain->SetBranchAddress("isolation", &isolation, &b_isolation);
 
-  // Enable cache for better read performances
-  fChain->SetCacheSize(10000000);
-  fChain->AddBranchToCache("*");
+  LeptonTree::InitCache();
 }

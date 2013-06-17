@@ -87,7 +87,6 @@ void AnalysisTree::Init(TTree *tree)
   fChain->SetBranchAddress("trigger_names", &trigger_names, NULL);
   fChain->SetBranchAddress("trigger_results", &trigger_results, NULL);
 
-  // Enable cache for better read performances
-  fChain->SetCacheSize(10000000);
-  fChain->AddBranchToCache("*");
+  //fChain->SetCacheSize(-1);
+  //fChain->AddBranchToCache("*");
 }

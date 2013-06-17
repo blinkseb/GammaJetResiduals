@@ -36,7 +36,5 @@ void MuonTree::Init(TTree *tree)
   fChain->SetBranchAddress("relative_isolation", &relative_isolation, NULL);
   fChain->SetBranchAddress("delta_beta_relative_isolation", &relative_isolation, NULL);
 
-  // Enable cache for better read performances
-  fChain->SetCacheSize(10000000);
-  fChain->AddBranchToCache("*");
+  LeptonTree::InitCache();
 }

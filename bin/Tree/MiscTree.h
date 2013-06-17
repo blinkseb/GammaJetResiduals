@@ -63,7 +63,6 @@ void MiscTree::Init(TTree *tree)
 
   fChain->SetBranchAddress("rho", &rho, &b_rho);
 
-  // Enable cache for better read performances
-  fChain->SetCacheSize(10000000);
-  fChain->AddBranchToCache("*");
+  //fChain->SetCacheSize(-1);
+  //fChain->AddBranchToCache("*");
 }

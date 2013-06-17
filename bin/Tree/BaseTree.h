@@ -44,6 +44,7 @@ class BaseTree {
     virtual ~BaseTree();
     virtual Int_t    GetEntry(Long64_t entry);
     virtual void     Init(TTree *tree);
+    virtual void     InitCache();
 };
 
 typedef BaseTree GenTree;
@@ -88,7 +89,10 @@ void BaseTree::Init(TTree *tree)
   fChain->SetBranchAddress("pz", &pz, &b_pz);
   fChain->SetBranchAddress("e", &e, NULL);
   
-  // Enable cache for better read performances
-  fChain->SetCacheSize(10000000);
-  fChain->AddBranchToCache("*");
+  InitCache();
+}
+
+void BaseTree::InitCache() {
+  //fChain->SetCacheSize(-1);
+  //fChain->AddBranchToCache("*");
 }

@@ -68,9 +68,7 @@ void JetTree::Init(TTree *tree)
   fChain->SetBranchAddress("qg_tag_mlp", &qg_tag_mlp, NULL);
   fChain->SetBranchAddress("qg_tag_likelihood", &qg_tag_likelihood, NULL);
 
-  // Enable cache for better read performances
-  fChain->SetCacheSize(10000000);
-  fChain->AddBranchToCache("*");
+  InitCache();
 }
 
 void JetTree::DisableUnrelatedBranches()
