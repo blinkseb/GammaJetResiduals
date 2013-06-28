@@ -23,7 +23,12 @@ datasets = [
     ["/G_Pt-1800_TuneZ2star_8TeV_pythia6/sbrochet-G_Pt-1800_START53_V7A_22Feb13-v1-31346b79deb97ac1b786d692cd650a21/USER", "G_Pt-1800", 1800, 8000, 1939122, 1.867141E-6],
 
     # QCD
-    ["/QCD_Pt-15to3000_TuneZ2star_Flat_8TeV_pythia6/sbrochet-QCD_Pt-15-3000_START53_V7A_22Feb13-v1-31346b79deb97ac1b786d692cd650a21/USER", "QCD_Pt-15-3000", -1, -1, 9991674, 2.99815997E10],
+    #["/QCD_Pt-15to3000_TuneZ2star_Flat_8TeV_pythia6/sbrochet-QCD_Pt-15-3000_START53_V7A_22Feb13-v1-31346b79deb97ac1b786d692cd650a21/USER", "QCD_Pt-15-3000", -1, -1, 9991674, 2.99815997E10],
+    ["/QCD_Pt_30_80_EMEnriched_TuneZ2star_8TeV_pythia6/sbrochet-QCD_Pt-30to80_START53_V7A_24Apr13-v1-31346b79deb97ac1b786d692cd650a21/USER", "QCD_Pt-30to80", 30, 80, 31660888, 7.433E7],
+    ["/QCD_Pt_80_170_EMEnriched_TuneZ2star_8TeV_pythia6/sbrochet-QCD_Pt-80to170_START53_V7A_24Apr13-v1-31346b79deb97ac1b786d692cd650a21/USER", "QCD_Pt-80to170", 30, 170, 31070763, 1191000.0],
+    ["/QCD_Pt_170_250_EMEnriched_TuneZ2star_8TeV_pythia6/sbrochet-QCD_Pt-170to250_START53_V7A_24Apr13-v1-31346b79deb97ac1b786d692cd650a21/USER", "QCD_Pt-170to250", 170, 250, 31053066, 30990.0],
+    ["/QCD_Pt_250_350_EMEnriched_TuneZ2star_8TeV_pythia6/sbrochet-QCD_Pt-250to350_START53_V7A_06May13-v1-60ae21afeccdf6fcfeaa8da24f363022/USER", "QCD_Pt-250to350", 250, 350, 33091322, 4250.0],
+    ["/QCD_Pt_350_EMEnriched_TuneZ2star_8TeV_pythia6/sbrochet-QCD_Pt-350_START53_V7A_06May13-v1-60ae21afeccdf6fcfeaa8da24f363022/USER", "QCD_Pt-350", 350, 8000, 33060562, 810.0],
     ]
 
 # Get email address
