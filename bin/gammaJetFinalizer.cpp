@@ -287,7 +287,7 @@ void GammaJetFinalizer::runAnalysis() {
   analysisTree->SetName("misc");
 
   TTree *miscTree = NULL;
-  cloneTree(miscChain.fChain, miscTree);
+  cloneTree(misc.fChain, miscTree);
   miscTree->SetName("rho");
 #endif
 
